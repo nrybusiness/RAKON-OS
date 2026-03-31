@@ -1,12 +1,7 @@
-# ESPECIFICACIONES TÉCNICAS RAKON
+# PROTOCOLO DE COMUNICACIÓN HÍBRIDO
 
-## Stack Base
-- **Lenguajes:** JavaScript (Google Apps Script), Python.
-- **Integraciones:** GitHub, OpenAI/Gemini API, Google Ecosystem.
-- **Metodología:** Desarrollo Modular Orientado a Agentes (AOMD).
-
-## Flujo de Comunicación
-1. El Usuario (**Nicolás**) emite una orden al **KERNEL**.
-2. El **KERNEL** analiza, desglosa y deriva a los agentes pertinentes.
-3. Los agentes ejecutan en sus respectivos directorios.
-4. La consolidación se realiza vía Commits en este repositorio.
+## Flujo de Trabajo
+1. Nicolás define el área de intervención (Técnica o Creativa).
+2. Se activa el núcleo correspondiente en un solo chat consolidado.
+3. El KERNEL distribuye las tareas internas a los sub-agentes del núcleo.
+4. Los resultados se sincronizan en sus respectivas carpetas de GitHub.
