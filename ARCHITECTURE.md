@@ -1,19 +1,15 @@
-# RAKON-OS | Sistema de Gestión Unificado (v3.0)
-**Arquitecto:** Nicolás
-**Socio Estratégico:** KERNEL
+# ARQUITECTURA HÍBRIDA: GITHUB + DRIVE
 
-## Visión
-RAKON-OS es una capa de memoria persistente y un entorno de ejecución agnóstico diseñado para centralizar el desarrollo de software, la creación audiovisual y la planificación estratégica. El sistema elimina la pérdida de contexto mediante una estructura de "Catálogo Universal" y el uso de Google Drive como "Single Source of Truth" (SSOT).
+## 1. Sincronización de Contexto
+El KERNEL extrae la memoria operativa leyendo el árbol de archivos de GitHub al inicio de cada sesión de desarrollo. Los activos visuales requeridos por BETA se referencian mediante enlaces estáticos apuntando a las carpetas correspondientes en Google Drive.
 
-## Estructura de Operación (3 Núcleos)
-1. **KERNEL (Gobernanza):** Supervisión del sistema, bienestar (Protocolo DELTA) y estrategia de alto nivel.
-2. **NODE (Lógica):** Desarrollo de código, automatización, APIs y gestión de bases de datos.
-3. **FLUX (Creatividad):** Dirección de arte, UI/UX, activos audiovisuales y narrativa de marca.
+## 2. Estructura de Rutas Espejo
+Todo proyecto nuevo debe existir en ambos entornos simultáneamente:
+- **Lógica (GitHub):** `RAKON_OS_REPO/02_PROJECTS/[Nombre_Proyecto]/dev/`
+- **Media (Drive):** `RAKON_OS_DRIVE/02_PROJECTS/[Nombre_Proyecto]/media/`
 
-## Mapa del Ecosistema
-- **`/00_SYSTEM`**: Documentación técnica, reglas de juego e índice maestro de proyectos.
-- **`/01_LIBRARY`**: Memoria técnica y creativa reutilizable (Snippets y Assets).
-- **`/02_PROJECTS`**: Espacios de trabajo individuales y aislados para ejecución específica.
-
-## Protocolo de Inicio de Sesión
-Cada interacción con la IA debe comenzar con la lectura de este directorio para sincronizar el estado actual de la "Mente Brillante" con el progreso real en Drive.
+## 3. Flujo de Trabajo Operativo
+1. **Planeación:** GAMMA define objetivos y requerimientos en `/00_SYSTEM`.
+2. **Desarrollo:** ALPHA escribe código en el repositorio local y ejecuta el control de versiones hacia GitHub.
+3. **Diseño:** BETA carga maquetas, vectores y recursos pesados en la carpeta asignada en Drive.
+4. **Registro:** Se actualiza el `MASTER_INDEX.md` documentando las coordenadas cruzadas de ambos entornos.
