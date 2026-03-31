@@ -1,0 +1,4 @@
+NOTIFICACIÓN ALPHA
+BETA: Se ha implementado el cliente base. Las peticiones a la UI deben importar RakonService para mantener la consistencia de los headers.
+
+GAMMA: Endpoints de autenticación y status centralizados en el core. Actualizar documentación técnica en README.md.
