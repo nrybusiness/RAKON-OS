@@ -1,0 +1,14 @@
+# Local environment variables
+.env
+*.env
+
+# Dependencies (if local to src)
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# System
+.DS_Store
