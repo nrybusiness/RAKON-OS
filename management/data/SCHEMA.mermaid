@@ -1,0 +1,68 @@
+erDiagram
+    CATEGORIA ||--o{ PRODUCTO : clasifica
+    PROVEEDOR ||--o{ PRODUCTO : suministra
+    PRODUCTO ||--o{ LOTE : contiene
+    PRODUCTO ||--o{ MOVIMIENTO_INVENTARIO : registra
+    SUCURSAL ||--o{ MOVIMIENTO_INVENTARIO : origina
+    SUCURSAL ||--o{ STOCK_SUCURSAL : posee
+    PRODUCTO ||--o{ STOCK_SUCURSAL : se_almacena_en
+
+    CATEGORIA {
+        int id PK
+        string nombre
+        string descripcion
+    }
+
+    PRODUCTO {
+        string sku PK
+        string nombre
+        string codigo_barras UNIQUE
+        int categoria_id FK
+        int proveedor_id FK
+        decimal precio_venta
+        boolean activo
+    }
+
+    PROVEEDOR {
+        int id PK
+        string nit UNIQUE
+        string razon_social
+        string contacto_tel
+    }
+
+    LOTE {
+        int id PK
+        string sku FK
+        date fecha_ingreso
+        date fecha_vencimiento
+        int cantidad_inicial
+        int cantidad_remanente
+        decimal costo_unitario
+    }
+
+    STOCK_SUCURSAL {
+        int sucursal_id PK, FK
+        string sku PK, FK
+        int cantidad_actual
+        int stock_minimo
+        int stock_maximo
+        string pasillo_ubicacion
+    }
+
+    MOVIMIENTO_INVENTARIO {
+        bigint id PK
+        timestamp fecha_hora
+        string sku FK
+        int sucursal_id FK
+        string tipo_movimiento "ENTRADA|SALIDA|TRASLADO|AJUSTE"
+        int cantidad
+        string motivo
+        string usuario_id
+    }
+
+    SUCURSAL {
+        int id PK
+        string nombre
+        string direccion
+        string ciudad
+    }
