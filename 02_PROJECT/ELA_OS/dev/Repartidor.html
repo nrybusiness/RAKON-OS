@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { background-color: #f0f2f5; margin: 0; padding: 15px; font-family: sans-serif; }
+    .header { text-align: center; margin-bottom: 20px; color: #333; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+    
+    .grid-tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+    .ticket { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-top: 10px solid #ccc; display: flex; flex-direction: column;}
+    
+    .t-porpagar { border-top-color: #dc3545; background: #fff5f5; }
+    .t-pendiente { border-top-color: #ffc107; }
+    .t-cocina { border-top-color: #0dcaf0; }
+    .t-reparto { border-top-color: #6f42c1; } 
+    
+    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .t-id { font-size: 22px; font-weight: 900; color: #333; }
+    .t-badge { font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 20px; background: #eee; }
+    
+    .t-cliente { font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;}
+    
+    .btn-action { text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-right: 5px; margin-bottom: 10px;}
+    .btn-wa { background: #25D366; color: white; }
+    .btn-call { background: #0d6efd; color: white; }
+    .btn-map { background: #ea4335; color: white; } 
+    
+    .t-direccion { background: #e9ecef; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 10px; border-left: 5px solid #6c757d; }
+    
+    .item-list { margin: 10px 0; padding: 0; list-style: none; border-top: 1px dashed #ccc; padding-top: 10px; flex-grow: 1;}
+    .item-list li { font-size: 16px; font-weight: 600; padding: 3px 0; color: #222; }
+    
+    .t-pago { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; background: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;}
+    .t-metodo { background: #ffc107; padding: 3px 8px; border-radius: 4px; font-size: 14px; color: #000;}
+    
+    .btn-ticket { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; margin-top: auto;}
+    .btn-green { background: #198754; } .btn-red { background: #dc3545; }
+    .btn-ticket:disabled { background: #e9ecef !important; color: #adb5bd !important; cursor: not-allowed; border: 1px solid #ced4da;}
+    
+    #loader { position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; display: none; z-index: 100;}
+  </style>
+</head>
+<body>
+
+<div id="loader">Actualizando visor...</div>
+<div class="header"><h2>🛵 Visor de Domicilios</h2></div>
+<div id="pantalla-reparto" class="grid-tickets">Cargando pedidos...</div>
+
+<script>
+  let procesando = false;
+  function lockUI(status) {
+    procesando = status;
+    document.getElementById('loader').style.display = status ? 'block' : 'none';
+    document.querySelectorAll('.btn-ticket').forEach(b => { if(!b.disabled || status) b.disabled = status; });
+  }
+
+  function cargarRepartos() {
+    google.script.run.withSuccessHandler(res => {
+      const cont = document.getElementById('pantalla-reparto');
+      
+      cont.innerHTML = res.map(p => {
+        let claseBorde = '';
+        let badge = '';
+        let botonHTML = '';
+
+        if (p.est === "POR PAGAR 💰") {
+          claseBorde = 't-porpagar'; badge = '🔴 Falta Pago';
+          botonHTML = `<button class="btn-ticket btn-red" onclick="confirmarPago('${p.id}')">💰 Confirmar Pago</button>`;
+        } else if (p.est === "PENDIENTE") {
+          claseBorde = 't-pendiente'; badge = '⏳ En Cola';
+          botonHTML = `<button class="btn-ticket" disabled>Esperando a Cocina...</button>`;
+        } else if (p.est === "EN COCINA 👨‍🍳") {
+          claseBorde = 't-cocina'; badge = '🍳 Preparando';
+          botonHTML = `<button class="btn-ticket" disabled>Cocinando...</button>`;
+        } else if (p.est === "EN REPARTO 🛵") {
+          claseBorde = 't-reparto'; badge = '🛵 LISTO PARA LLEVAR';
+          botonHTML = `<button class="btn-ticket btn-green" onclick="entregar('${p.id}')">✅ Confirmar Entrega</button>`;
+        }
+
+        let urlMapa = "https://maps.google.com/?q=" + encodeURIComponent(p.direccion);
+
+        return `
+        <div class="ticket ${claseBorde}">
+          <div class="t-header">
+            <span class="t-id">#${String(p.id).split('-').slice(-2)[0]}</span>
+            <span class="t-badge">${badge}</span>
+          </div>
+          
+          <div class="t-cliente">👤 ${p.cliente}</div>
+          
+          <div>
+            ${p.celular ? `
+              <a href="https://wa.me/57${p.celular}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a> 
+              <a href="tel:${p.celular}" class="btn-action btn-call">📞 Llamar</a>
+            ` : '<span style="color:red; font-size:12px;">Sin teléfono</span><br>'}
+            
+            <a href="${urlMapa}" target="_blank" class="btn-action btn-map">🗺️ Mapa</a>
+          </div>
+
+          <div class="t-direccion">
+            📍 ${p.direccion}
+            ${p.notas ? `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${p.notas}</div>` : ''}
+          </div>
+          
+          <ul class="item-list">${p.items.map(i => `<li>• ${i}</li>`).join('')}</ul>
+
+          <div class="t-pago">
+            <div>Cobrar: <span style="color:#dc3545;">$${p.total.toLocaleString()}</span></div>
+            <div class="t-metodo">${p.metodo_pago.toUpperCase()}</div>
+          </div>
+
+          ${botonHTML}
+        </div>`;
+      }).join('') || '<h3 style="text-align:center; color:#6c757d; grid-column: 1 / -1;">No hay domicilios activos ✅</h3>';
+      
+      if (!procesando) setTimeout(cargarRepartos, 5000); 
+    }).obtenerPedidosReparto();
+  }
+
+  function entregar(id) {
+    lockUI(true);
+    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).finalizarReparto(id);
+  }
+  
+  function confirmarPago(id) {
+    lockUI(true);
+    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).ejecutarConfirmacionPagoRemoto(String(id).split('-').slice(-2)[0]);
+  }
+
+  cargarRepartos();
+</script>
+</body>
+</html>
