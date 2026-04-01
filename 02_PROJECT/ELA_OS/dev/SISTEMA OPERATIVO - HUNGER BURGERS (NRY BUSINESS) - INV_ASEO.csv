@@ -1,0 +1,6 @@
+,Stock Inicial,Entradas (Compras),Salidas (Consumos),Stock Actual,Unidad,Costo Unitario,Stock Mínimo,Rendimiento
+Detergente,"99.999,00","99.999,00","99.999,00","99.999,00",g, $20,1,1000
+Desengrasante,"99.999,00","99.999,00","99.999,00","99.999,00",litro, $2.500,1,1
+Lava platos,"99.999,00","99.999,00","99.999,00","99.999,00",lb, $7.000,1,1
+Limpido,"99.999,00","99.999,00","99.999,00","99.999,00",Und, $2.000,1,1
+Citronela,"99.999,00","99.999,00","99.999,00","99.999,00",litro, $2.500,1,1
