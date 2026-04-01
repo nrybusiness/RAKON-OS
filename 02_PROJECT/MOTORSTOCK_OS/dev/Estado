@@ -19,3 +19,21 @@ Módulo Vendedor (DashboardView): Panel de control denominado "Mi Almacén". Mue
 
 Diagnóstico ALPHA:
 Tenemos un prototipo de frontend estático. La lógica de negocio está desconectada. El buscador no filtra, los resultados son simulados y el botón de "Publicar Ahora" en el panel del vendedor no transmite datos.
+
+**PROYECTO:** MOTORSTOCK_OS
+**ID:** RAKON-PRJ-002
+**ESTADO:** EN PAUSA / FASE DE PLANEACIÓN
+
+**SINOPSIS ESTRATÉGICA:**
+Buscador centralizado y panel de administración para el mercado de repuestos de motocicletas en Antioquia. El modelo de negocio se orienta a suscripción (SaaS) o venta de leads (tráfico a WhatsApp), omitiendo el cobro por transacción directa.
+
+**ARQUITECTURA ACTUAL (MVP):**
+* **Frontend:** SPA estática maquetada con React, Tailwind CSS y Babel. Módulos de búsqueda, resultados y panel de vendedor (datos simulados).
+* **Backend:** Google Apps Script (`Codigo.gs`) configurado como gateway (`XFrameOptionsMode.ALLOWALL`), sin lógica de base de datos activa.
+* **Base de Datos:** Google Sheets (Pendiente de estructuración).
+
+**DIAGNÓSTICO Y RIESGO CRÍTICO (GAMMA):**
+Viabilidad comercial confirmada con costo de infraestructura de $0 USD. El cuello de botella operativo es la fricción en la carga manual de repuestos por parte de los almacenes, lo que amenaza la adopción del sistema.
+
+**PRÓXIMA ACCIÓN (AL REANUDAR):**
+Suspender modificaciones visuales de la interfaz. La prioridad técnica absoluta es estructurar la base de datos maestra en Google Sheets y programar un algoritmo de ingesta masiva (ALPHA) para cargar inventarios completos desde archivos Excel/CSV en segundos.
