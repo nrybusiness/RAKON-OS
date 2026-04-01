@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MotoStock Colombia</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; background-color: #09090b; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideInBottom { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideInTop { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    .slide-in-from-right { animation: slideInRight 0.3s ease-out; }
+    .slide-in-from-bottom { animation: slideInBottom 0.3s ease-out; }
+    .slide-in-from-top { animation: slideInTop 0.3s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+    
+    // Iconos SVG nativos para evitar bloqueos de CDN en GAS
+    const Search = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    const MapPin = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+    const MessageCircle = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>;
+    const PlusCircle = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>;
+    const LayoutDashboard = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>;
+    const Menu = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>;
+    const XIcon = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+    const Settings = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+    const Package = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>;
+    const Eye = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+    const ArrowLeft = ({size=24, className=""}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
+
+    const App = () => {
+      const [currentView, setCurrentView] = useState('home');
+      const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+      const brands = ["Yamaha", "Honda", "Bajaj", "Suzuki", "KTM", "Kawasaki"];
+      const lines = ["MT-09", "Pulsar NS 200", "CB 190R", "NMAX", "Duke 390", "Z400"];
+      const years = ["2024", "2023", "2022", "2021", "2020", "2019"];
+
+      const mockProducts = [
+        { id: 1, name: "Pastillas de Freno EBC", price: 125000, store: "Repuestos El Rayo", location: "La Bayadera, Medellín", stock: 12 },
+        { id: 2, name: "Kit de Arrastre DID", price: 450000, store: "MotoCenter Norte", location: "Bello, Antioquia", stock: 5 },
+        { id: 3, name: "Filtro de Aire K&N", price: 85000, store: "Pits Stop 70", location: "Cundinamarca, Bogotá", stock: 20 },
+        { id: 4, name: "Llantas Diablo Rosso IV", price: 890000, store: "Cauchos y Más", location: "Itagüí", stock: 4 },
+      ];
+
+      const HomeView = () => (
+        <div className="flex flex-col min-h-screen fade-in">
+          <section className="relative h-[60vh] flex items-center justify-center px-6 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-orange-600/20 to-zinc-950 z-0"></div>
+            <div className="relative z-10 text-center max-w-lg">
+              <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter mb-2">
+                MOTO<span className="text-orange-500 underline decoration-4 underline-offset-4">STOCK</span>
+              </h1>
+              <p className="text-zinc-400 text-sm md:text-base font-medium mb-8">
+                La red de repuestos más grande de Colombia en un solo lugar.
+              </p>
+
+              <div className="bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-zinc-800 shadow-2xl">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <select className="bg-zinc-800 text-white text-sm p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500 transition-colors appearance-none">
+                    <option>Marca</option>
+                    {brands.map(b => <option key={b}>{b}</option>)}
+                  </select>
+                  <select className="bg-zinc-800 text-white text-sm p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500 transition-colors appearance-none">
+                    <option>Modelo</option>
+                    {lines.map(l => <option key={l}>{l}</option>)}
+                  </select>
+                  <select className="bg-zinc-800 text-white text-sm p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500 transition-colors appearance-none col-span-2">
+                    <option>Año</option>
+                    {years.map(y => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="relative mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Ej: Kit de arrastre, aceite..."
+                    className="w-full bg-zinc-800 text-white p-4 pr-12 rounded-xl border border-zinc-700 outline-none focus:ring-2 focus:ring-orange-500/50"
+                  />
+                  <Search size={20} className="absolute right-4 top-4 text-zinc-500" />
+                </div>
+                <button 
+                  onClick={() => setCurrentView('results')}
+                  className="w-full bg-orange-600 hover:bg-orange-500 active:scale-95 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-orange-900/20 uppercase tracking-widest text-sm"
+                >
+                  Buscar Repuesto
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="px-6 py-8">
+            <h2 className="text-zinc-500 uppercase text-xs font-bold tracking-widest mb-4">Categorías Populares</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {['Motor', 'Frenos', 'Llantas', 'Luces', 'Escape', 'Filtros'].map(cat => (
+                <div key={cat} className="bg-zinc-900 p-4 rounded-xl text-center border border-zinc-800 hover:border-orange-500 transition-colors cursor-pointer group">
+                  <span className="text-white text-xs font-medium group-hover:text-orange-500">{cat}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+
+      const ResultsView = () => (
+        <div className="min-h-screen px-6 py-4 slide-in-from-right">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={() => setCurrentView('home')} className="p-2 bg-zinc-900 rounded-full text-white">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 className="text-xl font-bold text-white leading-none">Resultados</h2>
+              <span className="text-xs text-zinc-500">4 repuestos encontrados para "Yamaha MT-09"</span>
+            </div>
+          </div>
+
+          <div className="space-y-4 pb-20">
+            {mockProducts.map((p) => (
+              <div key={p.id} className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden flex flex-col sm:flex-row shadow-xl">
+                <div className="w-full sm:w-32 h-40 sm:h-auto bg-zinc-800 flex items-center justify-center relative">
+                  <Package size={40} className="text-zinc-700" />
+                  <div className="absolute top-2 left-2 bg-orange-600 text-[10px] px-2 py-0.5 rounded-full text-white font-bold uppercase">Nuevo</div>
+                </div>
+                
+                <div className="p-4 flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="text-white font-bold text-lg">{p.name}</h3>
+                    <span className="text-orange-500 font-black text-xl">${p.price.toLocaleString()}</span>
+                  </div>
+                  <p className="text-zinc-400 text-sm font-semibold mb-2">{p.store}</p>
+                  
+                  <div className="flex items-center text-zinc-500 text-xs mb-4">
+                    <MapPin size={14} className="mr-1 text-orange-500" />
+                    {p.location}
+                  </div>
+
+                  <button className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all">
+                    <MessageCircle size={18} />
+                    Contactar por WhatsApp
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      const DashboardView = () => (
+        <div className="min-h-screen px-6 py-6 slide-in-from-bottom pb-24">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-2xl font-black text-white uppercase italic">Mi Almacén</h2>
+              <p className="text-zinc-500 text-sm italic">Panel de administración</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-orange-600 flex items-center justify-center border-2 border-orange-400 shadow-lg">
+              <span className="text-white font-bold">R</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-zinc-900 p-5 rounded-2xl border-l-4 border-orange-600">
+              <Package size={20} className="text-orange-500 mb-2" />
+              <p className="text-2xl font-black text-white">24</p>
+              <p className="text-[10px] text-zinc-500 uppercase font-bold">Publicados</p>
+            </div>
+            <div className="bg-zinc-900 p-5 rounded-2xl border-l-4 border-blue-500">
+              <Eye size={20} className="text-blue-500 mb-2" />
+              <p className="text-2xl font-black text-white">1,240</p>
+              <p className="text-[10px] text-zinc-500 uppercase font-bold">Visitas Perfil</p>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 shadow-2xl mb-6">
+            <div className="flex items-center gap-2 mb-6">
+              <PlusCircle size={20} className="text-orange-500" />
+              <h3 className="text-white font-bold">Subir Nuevo Repuesto</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1 ml-1">Nombre del Repuesto</label>
+                <input type="text" placeholder="Ej: Cadena Reforzada" className="w-full bg-zinc-800 text-white p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1 ml-1">Precio ($)</label>
+                  <input type="number" placeholder="0.00" className="w-full bg-zinc-800 text-white p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1 ml-1">Stock</label>
+                  <input type="number" placeholder="1" className="w-full bg-zinc-800 text-white p-3 rounded-xl border border-zinc-700 outline-none focus:border-orange-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1 ml-1">Categoría</label>
+                <select className="w-full bg-zinc-800 text-white p-3 rounded-xl border border-zinc-700 outline-none appearance-none">
+                  <option>Seleccionar...</option>
+                  <option>Motor</option>
+                  <option>Accesorios</option>
+                </select>
+              </div>
+              <button className="w-full bg-orange-600 text-white font-black py-4 rounded-xl uppercase tracking-tighter text-sm mt-4 hover:bg-orange-500">
+                Publicar Ahora
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="bg-zinc-950 min-h-screen text-zinc-200 font-sans selection:bg-orange-500 selection:text-white">
+          <header className="px-6 py-4 flex justify-between items-center border-b border-zinc-900 sticky top-0 bg-zinc-950/80 backdrop-blur-lg z-50">
+            <div 
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => setCurrentView('home')}
+            >
+              <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center rotate-3 shadow-lg shadow-orange-600/20">
+                <Settings size={18} className="text-white" />
+              </div>
+              <span className="text-xl font-black italic tracking-tighter text-white">MOTOSTOCK</span>
+            </div>
+            
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="text-white p-2"
+            >
+              {isMenuOpen ? <XIcon /> : <Menu />}
+            </button>
+          </header>
+
+          {isMenuOpen && (
+            <div className="fixed inset-0 bg-zinc-950 z-40 flex flex-col p-10 slide-in-from-top">
+              <div className="space-y-8 mt-20">
+                {['Inicio', 'Buscar Repuestos', 'Mi Perfil', 'Almacenes Aliados', 'Soporte'].map((item, i) => (
+                  <a key={item} href="#" className="block text-4xl font-black text-white hover:text-orange-500 transition-colors tracking-tighter italic">
+                    {item}
+                  </a>
+                ))}
+                <button 
+                  onClick={() => { setCurrentView('dashboard'); setIsMenuOpen(false); }}
+                  className="mt-10 px-8 py-4 bg-orange-600 text-white font-bold rounded-2xl w-full"
+                >
+                  Ir a Panel Vendedor
+                </button>
+              </div>
+            </div>
+          )}
+
+          <main className="max-w-md mx-auto">
+            {currentView === 'home' && <HomeView />}
+            {currentView === 'results' && <ResultsView />}
+            {currentView === 'dashboard' && <DashboardView />}
+          </main>
+
+          <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/90 backdrop-blur-xl border-t border-zinc-800 px-8 py-4 flex justify-between items-center z-50">
+            <button 
+              onClick={() => setCurrentView('home')}
+              className={`flex flex-col items-center gap-1 ${currentView === 'home' ? 'text-orange-500' : 'text-zinc-500'}`}
+            >
+              <Search size={22} />
+              <span className="text-[10px] font-bold uppercase">Buscar</span>
+            </button>
+            
+            <button 
+              onClick={() => setCurrentView('results')}
+              className={`flex flex-col items-center gap-1 ${currentView === 'results' ? 'text-orange-500' : 'text-zinc-500'}`}
+            >
+              <Package size={22} />
+              <span className="text-[10px] font-bold uppercase">Tienda</span>
+            </button>
+
+            <button 
+              onClick={() => setCurrentView('dashboard')}
+              className={`flex flex-col items-center gap-1 ${currentView === 'dashboard' ? 'text-orange-500' : 'text-zinc-500'}`}
+            >
+              <LayoutDashboard size={22} />
+              <span className="text-[10px] font-bold uppercase">Panel</span>
+            </button>
+          </nav>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
