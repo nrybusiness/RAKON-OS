@@ -1,0 +1,21 @@
+Definición del Proyecto:
+Es un ecosistema digital estructurado como un buscador y panel de administración para el mercado de repuestos de motocicletas en Colombia. Funciona como un puente entre los inventarios de los almacenes físicos y los compradores finales.
+
+Estado Actual de la Arquitectura (Archivos en Memoria):
+
+1. Motor de Despliegue (Codigo.gs):
+Actúa como el gateway del servidor web. Utiliza Google Apps Script exclusivamente para servir la interfaz visual (index.html) y autorizar su incrustación mediante XFrameOptionsMode.ALLOWALL. En este momento, no contiene lógica de procesamiento ni conexión a bases de datos.
+
+2. Interfaz de Usuario (index.html):
+Es una Single Page Application (SPA) maquetada con React (vía CDN), Tailwind CSS y Babel.
+
+El frontend contiene tres módulos visuales ya definidos:
+
+Módulo Búsqueda (HomeView): Interfaz principal con selectores anidados para Marca, Modelo y Año, barra de texto libre y botones de categorías rápidas.
+
+Módulo Resultados (ResultsView): Lista de productos renderizada a partir de una matriz de datos estáticos (mockProducts). Las tarjetas incluyen precio, nombre del almacén, ubicación geográfica y un botón de redirección para concretar la compra por WhatsApp.
+
+Módulo Vendedor (DashboardView): Panel de control denominado "Mi Almacén". Muestra métricas de visualización y contiene un formulario para cargar nuevos repuestos exigiendo nombre, precio, stock y categoría.
+
+Diagnóstico ALPHA:
+Tenemos un prototipo de frontend estático. La lógica de negocio está desconectada. El buscador no filtra, los resultados son simulados y el botón de "Publicar Ahora" en el panel del vendedor no transmite datos.
