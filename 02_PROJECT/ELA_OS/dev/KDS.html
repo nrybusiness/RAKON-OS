@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDS - Hunger Burgers</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
+    .header-general { background-color: #212529; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .header-title { margin: 0; font-size: 1.2rem; }
+    .btn-alarma { background: #17a2b8; color: white; border: 2px solid #fff; padding: 8px 15px; border-radius: 5px; font-weight: bold; }
+    .btn-alarma.active { background: #28a745; border: none; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; justify-content: center; }
+    .ticket { background: white; border-radius: 10px; width: 300px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: hidden; border-top: 8px solid #007bff; display: flex; flex-direction: column; }
+    .ticket.por-pagar { border-top-color: #dc3545; }
+    .ticket.en-cocina { border-top-color: #ffc107; }
+    .ticket-header { background: #f1f3f5; padding: 15px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+    .ticket-id { font-size: 1.4em; font-weight: bold; color: #495057; }
+    .ticket-type { font-size: 0.85em; background: #6c757d; color: white; padding: 3px 8px; border-radius: 12px; }
+    .ticket-body { padding: 15px; flex-grow: 1; }
+    .client-name { font-weight: bold; font-size: 1.1em; margin-bottom: 4px; color: #212529; }
+    .client-details { font-size: 0.9em; color: #495057; margin-bottom: 4px; }
+    .items { list-style: none; padding: 0; margin: 0; margin-top: 10px; }
+    .items li { border-bottom: 1px dashed #ced4da; padding: 8px 0; font-size: 1em; font-weight: 500;}
+    .items li:last-child { border-bottom: none; }
+    .notes { background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 0.9em; font-style: italic; border-left: 4px solid #ffc107; font-weight: bold;}
+    .t-pago { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; background: #fff3cd; padding: 12px 15px; border-top: 1px solid #ffeeba; color: #212529; }
+    .t-metodo { background: #ffc107; padding: 3px 8px; border-radius: 4px; font-size: 13px; color: #000; text-transform: uppercase;}
+    #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; font-size: 1.5em; font-weight: bold; z-index: 1000; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: #fff; padding: 25px; border-radius: 12px; width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #dee2e6; margin-bottom: 20px; padding-bottom: 10px; }
+    .close-btn { font-size: 2em; cursor: pointer; color: #dc3545; font-weight: bold; line-height: 1; transition: 0.2s;}
+    .close-btn:hover { color: #a71d2a; }
+    #modalReceta .modal-content { background-color: #212529; color: #f8f9fa; border: 1px solid #495057; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    #modalReceta .modal-header { border-bottom: 2px solid #343a40; margin-bottom: 15px; padding-bottom: 10px; }
+    #modalReceta .close-btn { color: #f8f9fa; text-shadow: none; }
+    #modalReceta .close-btn:hover { color: #dc3545; }
+    #modalReceta li { border-bottom: 1px dashed #495057; padding: 10px 0; font-size: 1.1em;}
+    #tituloReceta { color: #f8f9fa !important; }
+  </style>
+</head>
+<body>
+
+  <div class="header-general">
+    <h2 class="header-title" id="kdsTitle">🍔 Hunger KDS (Solo Cocina)</h2>
+    <div class="btn-alarma active" style="cursor: default;">🔔 Alarma ON</div>
+  </div>
+
+  <audio id="sonidoAlarma" preload="auto">
+    <source src="https://upload.wikimedia.org/wikipedia/commons/b/b5/Radio_Pro_FM_Romania_Ding.ogg" type="audio/ogg">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+  </audio>
+
+  <div id="loadingOverlay">Procesando petición... ⏳</div>
+
+  <div id="modalReceta" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="tituloReceta" style="margin:0;">📖 Receta</h2>
+        <span class="close-btn" onclick="cerrarModalReceta()">×</span>
+      </div>
+      <div id="contenidoReceta" style="font-size: 1.1em; line-height: 1.6;"></div>
+    </div>
+  </div>
+
+  <div class="container" id="ticketsContainer">
+    <h3 style="color: #6c757d; width: 100%; text-align: center;">Cargando pedidos...</h3>
+  </div>
+
+  <script>
+    window.onload = () => { cargarSistemaCentral(); };
+
+    let ticketsConocidos = []; 
+    let alarmasActivadas = true; 
+    let audioDesbloqueado = false; 
+    let primeraCarga = true; 
+    let datosKDSGlobal = [];
+
+    function errorServidor(e) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      alert("❌ Error: " + (e.message || e));
+    }
+
+    document.body.addEventListener('click', function() {
+      if (!audioDesbloqueado) {
+        const audio = document.getElementById('sonidoAlarma');
+        audio.volume = 0; 
+        let playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = 1.0; 
+            audioDesbloqueado = true;
+          }).catch(e => console.log(e));
+        }
+      }
+    });
+
+    function dispararAlarma() {
+      if (!alarmasActivadas || !audioDesbloqueado) return;
+      const audio = document.getElementById('sonidoAlarma');
+      audio.currentTime = 0;
+      let playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => console.log("Alarma bloqueada", e));
+      }
+    }
+
+    function abrirModalReceta(nombre) {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('tituloReceta').innerText = "📖 " + nombre;
+        
+        let html = `<ul style="list-style: none; padding: 0;">`;
+        if(res.length === 0) {
+          html += `<li style="color: #dc3545; font-weight: bold; text-align: center;">No se encontró receta para este producto.</li>`;
+        } else {
+          res.forEach(r => {
+            html += `<li style="display: flex; justify-content: space-between;">
+                       <span>${r.ingrediente}</span>
+                       <strong>${r.cantidad}</strong>
+                     </li>`;
+          });
+        }
+        html += `</ul>`;
+        
+        document.getElementById('contenidoReceta').innerHTML = html;
+        document.getElementById('modalReceta').style.display = 'flex';
+      }).obtenerRecetaProducto(nombre);
+    }
+
+    function cerrarModalReceta() {
+      document.getElementById('modalReceta').style.display = 'none';
+    }
+
+    function cargarSistemaCentral() {
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarTickets).obtenerPedidosKDS();
+    }
+
+    function dibujarTickets(datos) {
+      const container = document.getElementById('ticketsContainer');
+      datosKDSGlobal = datos; 
+      
+      if (!datos || datos.length === 0) {
+        container.innerHTML = "<h3 style='color: #6c757d; width: 100%; text-align: center; margin-top: 50px;'>No hay pedidos activos 🍔</h3>";
+        ticketsConocidos = [];
+        primeraCarga = false; 
+        return;
+      }
+
+      const noOrdersMsg = container.querySelector('h3');
+      if(noOrdersMsg) noOrdersMsg.remove();
+
+      let idsActuales = datos.map(p => 'ticket-' + p.id);
+      let hayNuevo = false;
+
+      if (!primeraCarga) {
+        for (let idStr of idsActuales) {
+          if (!ticketsConocidos.includes(idStr)) { hayNuevo = true; break; }
+        }
+      }
+
+      if (hayNuevo && alarmasActivadas) { dispararAlarma(); }
+      ticketsConocidos = idsActuales;
+      primeraCarga = false; 
+
+      Array.from(container.children).forEach(child => {
+          if (child.id && !idsActuales.includes(child.id)) container.removeChild(child);
+      });
+
+      datos.forEach(p => {
+        let itemsHtml = p.itemsObj.map(item => `
+          <li style="display:flex; justify-content:space-between; align-items:center;">
+            <span>${item.nombre} (x${item.cant})</span>
+            <button style="background:none; border:none; cursor:pointer; font-size:1.3em;" onclick="abrirModalReceta('${item.nombre}')" title="Ver receta">📖</button>
+          </li>
+        `).join('');
+        
+        let ticketClass = 'ticket';
+        if (p.est === "POR PAGAR 💰") ticketClass += ' por-pagar';
+        if (p.est === "EN COCINA 👨‍🍳") ticketClass += ' en-cocina';
+
+        let displayTurno = p.id.split('-').length > 2 ? p.id.split('-')[p.id.split('-').length - 2] : p.id.split('-').pop();
+
+        let htmlInner = `
+          <div class="ticket-header">
+            <div class="ticket-id">#${displayTurno}</div>
+            <div class="ticket-type">${p.tipo}</div>
+          </div>
+          <div class="ticket-body">
+            <div class="client-name" style="margin-bottom: 4px;">👤 ${p.cliente}</div>
+            ${p.celular ? `<div class="client-details">📞 ${p.celular}</div>` : ''}
+            ${p.direccion ? `<div class="client-details" style="margin-bottom: 10px;">📍 ${p.direccion}</div>` : ''}
+            <ul class="items" style="margin-top: 10px;">${itemsHtml}</ul>
+            ${p.notas ? `<div class="notes">📝 "${p.notas}"</div>` : ''}
+          </div>
+          <div class="t-pago">
+            <div>Cobrar: <span style="color:#dc3545;">$${p.total.toLocaleString()}</span></div>
+            <div class="t-metodo">${p.metodo_pago}</div>
+          </div>
+        `;
+
+        let bgEst = '#6c757d'; 
+        let txtEst = '#fff';
+        if (p.est === "EN COCINA 👨‍🍳") { bgEst = '#ffc107'; txtEst = '#000'; }
+        else if (p.est === "PENDIENTE") { bgEst = '#007bff'; txtEst = '#fff'; }
+        else if (p.est === "POR PAGAR 💰") { bgEst = '#dc3545'; txtEst = '#fff'; }
+        
+        htmlInner += `
+          <div style="background: ${bgEst}; color: ${txtEst}; text-align: center; padding: 12px; font-weight: bold; font-size: 1.2em; border-top: 1px solid #dee2e6;">
+            ESTADO: ${p.est}
+          </div>
+        `;
+
+        let existing = document.getElementById('ticket-' + p.id);
+        let hash = p.est + p.total + p.bloqueado + p.itemsObj.length + (p.notas || "") + JSON.stringify(p.itemsObj);
+        
+        if (existing) {
+            if (existing.dataset.hash !== hash) {
+                existing.innerHTML = htmlInner;
+                existing.dataset.hash = hash;
+                existing.className = ticketClass;
+            }
+        } else {
+            let t = document.createElement('div');
+            t.id = 'ticket-' + p.id;
+            t.className = ticketClass;
+            t.dataset.hash = hash;
+            t.innerHTML = htmlInner;
+            container.appendChild(t);
+        }
+      });
+    }
+
+    setInterval(cargarSistemaCentral, 5000);
+  </script>
+</body>
+</html>
