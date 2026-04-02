@@ -15,6 +15,8 @@ KDS.html: Interfaz de cocina.
 
 Admin.html: Gestión de inventarios y precios.
 
+Repartidor.html: Muestra los pedidos activos al repartidor con los datos del cliente.
+
 Enrutador Maestro: Implementar doGet(e) con el parámetro mode para servir las diferentes interfaces según la URL (?mode=kds, ?mode=admin).
 
 FASE 2: Desarrollo del Frontend (Menú Express)
