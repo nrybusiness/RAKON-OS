@@ -4,7 +4,7 @@
  */
 
 function doGet(e) {
-  const modo = e?.parameter?.mode || 'kds';
+  const modo = e?.parameter?.mode || 'menu';
   
   if (modo === 'api_rastreo') {
     const turno = e?.parameter?.turno || "";
@@ -31,7 +31,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
   }
 
-  let archivo = 'PanelUnificado'; // Nota: Ajusta esto si unificaste el routing hacia KDS/Admin.html o Menú.html
+  let archivo = 'Menu';
   if (modo === 'repartidor') archivo = 'Repartidor';
   if (modo === 'admin') archivo = 'Admin';
   if (modo === 'kds') archivo = 'KDS';
