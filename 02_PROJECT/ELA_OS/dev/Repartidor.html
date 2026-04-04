@@ -2,6 +2,8 @@
 <html>
 <head>
   <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body { background-color: #f0f2f5; margin: 0; padding: 15px; font-family: sans-serif; }
     .header { text-align: center; margin-bottom: 20px; color: #333; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
@@ -60,6 +62,8 @@
 
 <script>
   let procesando = false;
+  let hashRepartoCache = '';
+
   function lockUI(status) {
     procesando = status;
     document.getElementById('loader').style.display = status ? 'block' : 'none';
@@ -67,90 +71,164 @@
   }
 
   function cargarRepartos() {
-    google.script.run.withSuccessHandler(res => {
+    if (typeof google === 'undefined') {
+        document.getElementById('pantalla-reparto').innerHTML = '<h3 style="color:red; text-align:center; margin-top:40px;">Error: Entorno local detectado. Debes abrir esto desde Apps Script.</h3>';
+        return;
+    }
+
+    google.script.run
+    .withSuccessHandler(res => {
+      if (!res || !Array.isArray(res)) {
+         reintentarCarga();
+         return;
+      }
+
+      let strHash = JSON.stringify(res);
+      if (hashRepartoCache === strHash) {
+         reintentarCarga();
+         return;
+      }
+      hashRepartoCache = strHash;
+
       const cont = document.getElementById('pantalla-reparto');
-      
-      cont.innerHTML = res.map(p => {
-        let claseBorde = '';
-        let badge = '';
-        let botonHTML = '';
 
-        if (p.est === "POR PAGAR 💰") {
-          claseBorde = 't-porpagar'; badge = '🔴 Falta Pago';
-          botonHTML = `<button class="btn-ticket btn-red" onclick="confirmarPago('${p.id}')">💰 Confirmar Pago</button>`;
-        } else if (p.est === "PENDIENTE") {
-          claseBorde = 't-pendiente'; badge = '⏳ En Cola';
-          botonHTML = `<button class="btn-ticket" disabled>Esperando a Cocina...</button>`;
-        } else if (p.est === "EN COCINA 👨‍🍳") {
-          claseBorde = 't-cocina'; badge = '🍳 Preparando';
-          botonHTML = `<button class="btn-ticket" disabled>Cocinando...</button>`;
-        } else if (p.est === "EN REPARTO 🛵") {
-          claseBorde = 't-reparto'; badge = '🛵 LISTO PARA LLEVAR';
-          botonHTML = `<button class="btn-ticket btn-green" onclick="entregar('${p.id}')">✅ Confirmar Entrega</button>`;
-        }
+      if (res.length === 0) {
+         cont.innerHTML = '<div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;"><img src="https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34" style="height: 160px; filter: drop-shadow(0 10px 8px rgba(0,0,0,0.1)); margin-bottom: 15px;"><h3 style="text-align:center; color:#6c757d;">No hay domicilios activos ✅</h3></div>';
+         reintentarCarga();
+         return;
+      }
 
-        let urlMapa = "https://maps.google.com/?q=" + encodeURIComponent(p.direccion);
-        let telefonoCliente = p.celular || p.telefono;
+      let htmlFinal = "";
 
-        let notasDesplegadas = '';
-        if (p.notas) {
-           if (p.notas.includes('[💵 LLEVAR CAMBIO')) {
-              let parts = p.notas.split('\n');
-              let cambioStr = parts.find(s => s.includes('[💵'));
-              let otras = parts.filter(s => !s.includes('[💵')).join(' ');
-              notasDesplegadas = `<div class="nota-cambio">${cambioStr}</div>`;
-              if(otras && otras.trim() !== '') notasDesplegadas += `<div style="font-weight:normal; font-size:14px; margin-top:5px; color:#dc3545;">📝 ${otras}</div>`;
-           } else {
-              notasDesplegadas = `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${p.notas}</div>`;
-           }
-        }
+      for (let i = 0; i < res.length; i++) {
+         try {
+            let p = res[i];
+            let claseBorde = '';
+            let badge = '';
+            let botonHTML = '';
+            let est = String(p.est || "").trim();
 
-        return `
-        <div class="ticket ${claseBorde}">
-          <div class="t-header">
-            <span class="t-id">#${String(p.id).split('-').slice(-2)[0]}</span>
-            <span class="t-badge">${badge}</span>
-          </div>
-          
-          <div class="t-cliente">👤 ${p.cliente}</div>
-          
-          <div>
-            ${telefonoCliente ? `
-              <a href="https://wa.me/57${telefonoCliente}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a> 
-              <a href="tel:${telefonoCliente}" class="btn-action btn-call">📞 Llamar</a>
-            ` : '<span style="color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;">❌ Sin teléfono registrado</span><br>'}
+            if (est === "POR PAGAR 💰") {
+              claseBorde = 't-porpagar'; badge = '🔴 Falta Pago';
+              botonHTML = `<button class="btn-ticket btn-red" onclick="confirmarPago('${p.id}')">💰 Confirmar Pago</button>`;
+            } else if (est === "PENDIENTE") {
+              claseBorde = 't-pendiente'; badge = '⏳ En Cola';
+              botonHTML = `<button class="btn-ticket" disabled>Esperando a Cocina...</button>`;
+            } else if (est === "EN COCINA 👨‍🍳") {
+              claseBorde = 't-cocina'; badge = '🍳 Preparando';
+              botonHTML = `<button class="btn-ticket" disabled>Cocinando...</button>`;
+            } else if (est === "EN REPARTO 🛵") {
+              claseBorde = 't-reparto'; badge = '🛵 LISTO PARA LLEVAR';
+              botonHTML = `<button class="btn-ticket btn-green" onclick="entregar('${p.id}')">✅ Confirmar Entrega</button>`;
+            } else {
+              claseBorde = 't-pendiente'; badge = est;
+              botonHTML = `<button class="btn-ticket" disabled>${est}</button>`;
+            }
+
+            let dirCompleta = String(p.direccion || "").trim() + ", Bello, Antioquia";
+            let urlMapa = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(dirCompleta);
             
-            <a href="${urlMapa}" target="_blank" class="btn-action btn-map">🗺️ Mapa</a>
-          </div>
+            // Lógica de contacto directa - Sin filtros ni prefijos
+            let rawTel = String(p.celular || p.telefono || "").trim();
+            let htmlContacto = '';
+            
+            if (rawTel.length > 0) {
+               let telParaUrl = rawTel.replace(/\s+/g, '');
+               htmlContacto = `
+                  <a href="https://wa.me/${telParaUrl}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a>
+                  <a href="tel:${telParaUrl}" class="btn-action btn-call">📞 Llamar</a>
+               `;
+            } else {
+               htmlContacto = '<span style="color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;">❌ Sin teléfono registrado</span><br>';
+            }
 
-          <div class="t-direccion">
-            📍 ${p.direccion}
-            ${notasDesplegadas}
-          </div>
-          
-          <ul class="item-list">${p.items.map(i => `<li>• ${i}</li>`).join('')}</ul>
+            let notasDesplegadas = '';
+            let notasRaw = String(p.notas || "");
 
-          <div class="t-pago">
-            <div>Cobrar: <span style="color:#dc3545;">$${p.total.toLocaleString()}</span></div>
-            <div class="t-metodo">${p.metodo_pago.toUpperCase()}</div>
-          </div>
+            if (notasRaw) {
+               if (notasRaw.includes('[💵 LLEVAR CAMBIO')) {
+                  let parts = notasRaw.split('\n');
+                  let cambioStr = parts.find(s => s.includes('[💵'));
+                  let otras = parts.filter(s => !s.includes('[💵')).join(' ');
+                  notasDesplegadas = `<div class="nota-cambio">${cambioStr}</div>`;
+                  if(otras && otras.trim() !== '') notasDesplegadas += `<div style="font-weight:normal; font-size:14px; margin-top:5px; color:#dc3545;">📝 ${otras}</div>`;
+               } else {
+                  notasDesplegadas = `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${notasRaw}</div>`;
+               }
+            }
 
-          ${botonHTML}
+            let met = String(p.metodo_pago || "EFECTIVO").toUpperCase();
+            let idCorto = String(p.id).includes('-') ? String(p.id).split('-').slice(-2)[0] : String(p.id);
+
+            let itemsHtml = "";
+            if (Array.isArray(p.items)) {
+               itemsHtml = p.items.map(item => `<li>• ${item}</li>`).join('');
+            } else {
+               itemsHtml = `<li>• ${p.items || ""}</li>`;
+            }
+
+            htmlFinal += `
+            <div class="ticket ${claseBorde}">
+              <div class="t-header">
+                <span class="t-id">#${idCorto}</span>
+                <span class="t-badge">${badge}</span>
+              </div>
+              <div class="t-cliente">👤 ${p.cliente || "Cliente"}</div>
+              <div>
+                ${htmlContacto}
+                <a href="${urlMapa}" target="_blank" class="btn-action btn-map">🗺️ Mapa</a>
+              </div>
+              <div class="t-direccion">
+                📍 ${p.direccion || "Sin dirección"}
+                ${notasDesplegadas}
+              </div>
+              <ul class="item-list">${itemsHtml}</ul>
+              <div class="t-pago">
+                <div>Cobrar: <span style="color:#dc3545;">$${(Number(p.total) || 0).toLocaleString()}</span></div>
+                <div class="t-metodo">${met}</div>
+              </div>
+              ${botonHTML}
+            </div>`;
+         } catch (errLoop) {
+            console.error("Error aislando ticket corrupto:", errLoop);
+         }
+      }
+
+      cont.innerHTML = htmlFinal;
+      reintentarCarga();
+    })
+    .withFailureHandler(err => {
+      console.error("Error crítico de servidor:", err);
+      document.getElementById('pantalla-reparto').innerHTML = `
+        <div style="grid-column: 1 / -1; background:#f8d7da; color:#721c24; padding:20px; border-radius:10px; text-align:center; margin-top:40px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+          <h3>⚠️ ERROR DE CONEXIÓN CON EL SERVIDOR</h3>
+          <p style="font-weight:bold;">${err.message || 'Sin detalles adicionales. Revisa el código del Backend.'}</p>
+          <button onclick="cargarRepartos()" style="margin-top:15px; padding:12px 24px; background:#dc3545; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;">Forzar Recarga</button>
         </div>`;
-      }).join('') || '<div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;"><img src="https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34" style="height: 160px; filter: drop-shadow(0 10px 8px rgba(0,0,0,0.1)); margin-bottom: 15px;"><h3 style="text-align:center; color:#6c757d;">No hay domicilios activos ✅</h3></div>';
-      
-      if (!procesando) setTimeout(cargarRepartos, 5000); 
-    }).obtenerPedidosReparto();
+      setTimeout(cargarRepartos, 15000);
+    })
+    .obtenerPedidosReparto();
+  }
+
+  function reintentarCarga() {
+     if (!procesando) setTimeout(cargarRepartos, 5000);
   }
 
   function entregar(id) {
     lockUI(true);
-    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).finalizarReparto(id);
+    google.script.run
+      .withSuccessHandler(() => { lockUI(false); hashRepartoCache = ''; cargarRepartos(); })
+      .withFailureHandler(err => { lockUI(false); alert("Error de red: " + err.message); })
+      .finalizarReparto(id);
   }
-  
+
   function confirmarPago(id) {
     lockUI(true);
-    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).ejecutarConfirmacionPagoRemoto(String(id).split('-').slice(-2)[0]);
+    let turnoCorte = String(id).includes('-') ? String(id).split('-').slice(-2)[0] : String(id);
+    google.script.run
+      .withSuccessHandler(() => { lockUI(false); hashRepartoCache = ''; cargarRepartos(); })
+      .withFailureHandler(err => { lockUI(false); alert("Error de red: " + err.message); })
+      .ejecutarConfirmacionPagoRemoto(turnoCorte);
   }
 
   cargarRepartos();
