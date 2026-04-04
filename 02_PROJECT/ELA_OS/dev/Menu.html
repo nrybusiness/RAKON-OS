@@ -131,7 +131,7 @@
       <ul class="list-disc pl-5 space-y-1">
         <li>Las <strong>2 primeras salsas</strong> son gratis. Las extras cuestan <strong>$500</strong> c/u.</li>
         <li>Los empaques desechables suman <strong>$2.000</strong> a pedidos para llevar o domicilio.</li>
-        <li>El <strong>domicilio base es de $2.000</strong>, ajustable ($2.000 extra por cada km adicional).</li>
+        <li>La tarifa de domicilio se calcula automáticamente validando la cobertura.</li>
       </ul>
     </div>
 
@@ -181,12 +181,11 @@
       </div>
 
       <div x-show="cliente.tipo_pedido === 'DOMICILIO'" x-transition class="space-y-4 border-t border-gray-200 pt-4 mt-2">
-        <div><label class="block text-sm font-bold mb-1">Dirección exacta *</label><input type="text" x-model="cliente.direccion" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></div>
         <div>
-          <label class="block text-sm font-bold mb-1">Tarifa (Distancia) *</label>
-          <select x-model="cliente.distancia_km" class="w-full border border-gray-300 p-3 rounded-md bg-white focus:outline-none focus:border-acento">
-            <option value="0">Menos de 1 km (Base $2.000)</option><option value="1">1 a 2 km ($4.000)</option><option value="2">2 a 3 km ($6.000)</option><option value="3">3 a 4 km ($8.000)</option><option value="4">4 a 5 km ($10.000)</option>
-          </select>
+          <label class="block text-sm font-bold mb-1">Dirección exacta *</label>
+          <input type="text" x-model="cliente.direccion" @blur="calcularDistancia" :disabled="calculandoTarifa" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento">
+          <p x-show="calculandoTarifa" class="text-xs font-bold text-acento mt-1">Calculando cobertura y tarifa GPS...</p>
+          <p x-show="errorDireccion" class="text-xs font-bold text-danger mt-1" x-text="errorDireccion"></p>
         </div>
         <div x-show="cliente.metodo_pago === 'EFECTIVO'" class="bg-green-50 border border-green-200 p-3 rounded-lg">
           <label class="block text-sm font-bold text-green-900 mb-1">💵 ¿Con qué billete pagas?</label>
@@ -204,7 +203,7 @@
       <div class="flex justify-between mb-2 text-sm" x-show="desglose.salsas > 0"><span>Salsas Extra</span><span>$<span x-text="desglose.salsas.toLocaleString()"></span></span></div>
       <div class="flex justify-between mb-4 text-sm" x-show="desglose.domicilio > 0"><span>Valor Domicilio</span><span>$<span x-text="desglose.domicilio.toLocaleString()"></span></span></div>
       <div class="flex justify-between font-display text-2xl border-t border-[#624735] pt-4 mb-6 text-acento"><span>TOTAL</span><span>$<span x-text="desglose.total.toLocaleString()"></span></span></div>
-      <button @click="enviar" :disabled="enviando || carrito.length === 0 || !tiendaAbierta" class="w-full bg-acento text-white font-display text-xl py-4 rounded-md shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex justify-center gap-2">
+      <button @click="enviar" :disabled="enviando || calculandoTarifa || errorDireccion || carrito.length === 0 || !tiendaAbierta" class="w-full bg-acento text-white font-display text-xl py-4 rounded-md shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex justify-center gap-2">
         <span x-show="!enviando">CONFIRMAR ORDEN 🚀</span><span x-show="enviando" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-6 w-6"></span>
       </button>
     </div>
@@ -259,13 +258,34 @@
   </div>
 
   <div x-show="mostrarUpsell" style="display: none;" class="fixed inset-0 z-[115] flex items-center justify-center bg-black bg-opacity-75 p-4" @click.self="mostrarUpsell = false">
-    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento">
-      <h3 class="text-2xl font-display text-oscuro mb-2">¡Espera! 🍟</h3>
-      <p class="text-lg font-bold text-oscuro mb-6">¿Te gustaría añadir el combo de papas por solo <strong>$4.000</strong>?</p>
-      <div class="flex gap-4">
-        <button @click="mostrarUpsell = false" class="flex-1 bg-gray-300 text-oscuro py-3 rounded-lg font-bold hover:bg-gray-400">No, gracias</button>
-        <button @click="aceptarUpsell" class="flex-1 bg-acento text-white py-3 rounded-lg font-bold hover:bg-yellow-600 shadow-md">¡Sí, añadir!</button>
+    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento flex flex-col max-h-[90vh]">
+      
+      <div x-show="upsellFase === 1">
+        <h3 class="text-2xl font-display text-oscuro mb-2">¡Espera! 🍟</h3>
+        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'COMBO'">¿Te gustaría añadir <strong>Combo de Papas</strong> por solo <strong>$4.000</strong>?</p>
+        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'BEBIDA'">¿Te gustaría acompañar tu plato con <strong>una Bebida Refrescante</strong>?</p>
+        <div class="flex gap-4">
+          <button @click="mostrarUpsell = false" class="flex-1 bg-gray-300 text-oscuro py-3 rounded-lg font-bold hover:bg-gray-400">No, gracias</button>
+          <button @click="aceptarUpsell" class="flex-1 bg-acento text-white py-3 rounded-lg font-bold hover:bg-yellow-600 shadow-md">
+            <span x-show="upsellRecomendado.tipo === 'COMBO'">¡Sí, añadir!</span>
+            <span x-show="upsellRecomendado.tipo === 'BEBIDA'">¡Sí, elegir!</span>
+          </button>
+        </div>
       </div>
+
+      <div x-show="upsellFase === 2" class="flex flex-col h-full">
+        <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2">Elige tu bebida 🥤</h3>
+        <div class="overflow-y-auto scroll-hide flex-grow mb-4 space-y-2">
+           <template x-for="bebida in menuFiltrado('BEBIDAS')" :key="bebida.nombre">
+              <button @click="agregarBebidaUpsell(bebida)" class="w-full bg-white border-2 border-[#e5d4a5] text-oscuro py-3 px-4 rounded-lg font-bold shadow-sm hover:bg-gray-100 flex justify-between items-center transition">
+                 <span x-text="bebida.nombre" class="text-left text-sm"></span>
+                 <span class="text-acento font-bold">+$<span x-text="bebida.precio.toLocaleString()"></span></span>
+              </button>
+           </template>
+        </div>
+        <button @click="mostrarUpsell = false" class="text-gray-600 py-2 font-bold underline hover:text-oscuro">Cancelar</button>
+      </div>
+
     </div>
   </div>
 
@@ -279,13 +299,15 @@
       return {
         productos: [], adicionesDisponibles: [], salsasDisponibles: [], categoriasUnicas: [],
         carrito: [],
-        cliente: { nombre: '', celular: '', tipo_pedido: 'LOCAL', direccion: '', metodo_pago: 'EFECTIVO', notas: '', distancia_km: "0", paga_con: "" },
+        cliente: { nombre: '', celular: '', tipo_pedido: 'LOCAL', direccion: '', metodo_pago: 'EFECTIVO', notas: '', paga_con: "" },
         
         cargando: true, enviando: false, vista: 'catalogo', tiendaAbierta: true, estadoForzado: 'AUTO', eta: 15,
-        turnoRastreo: '', estadoOrden: null, errorRastreo: false, pollingInterval: null,
+        turnoRastreo: '', estadoOrden: null, errorRastreo: false, pollingInterval: null, hashRastreoCache: '',
         modalConfirmacion: false, ticketConfirmado: '', totalConfirmado: 0,
-        mostrarUpsell: false, modalPersonalizar: false, platoActivo: null, subItemsActivos: [], 
+        mostrarUpsell: false, upsellFase: 1, upsellRecomendado: { tipo: '' }, 
+        modalPersonalizar: false, platoActivo: null, subItemsActivos: [], 
         modalBebida: false, bebidaActiva: null, bebidaRequiereBase: false, bebidaBase: '',
+        calculandoTarifa: false, errorDireccion: null, tarifaCalculada: 0,
 
         get imagenRastreo() {
           if (!this.estadoOrden) return 'https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34';
@@ -383,20 +405,78 @@
           let idx = this.subItemsActivos.findIndex(i => i.nombre === itemRef.nombre);
           if (idx >= 0) { this.subItemsActivos[idx].cant += delta; if (this.subItemsActivos[idx].cant <= 0) this.subItemsActivos.splice(idx, 1); } else if (delta > 0) { this.subItemsActivos.push({ ...itemRef, cant: 1 }); }
         },
-        confirmarPlato() { let plato = { ...this.platoActivo, id: Date.now() + Math.random(), cant: 1, subItems: JSON.parse(JSON.stringify(this.subItemsActivos)) }; this.carrito.push(plato); this.modalPersonalizar = false; this.verificarUpsell(plato.nombre); },
+        
+        confirmarPlato() { 
+          let plato = { ...this.platoActivo, id: Date.now() + Math.random(), cant: 1, subItems: JSON.parse(JSON.stringify(this.subItemsActivos)) }; 
+          this.carrito.push(plato); 
+          this.modalPersonalizar = false; 
+          this.verificarUpsell(plato); 
+        },
+        
         agregarDirecto(prod) {
           let item = this.carrito.find(i => i.nombre === prod.nombre && (!i.subItems || i.subItems.length === 0));
           if (item) item.cant++; else this.carrito.push({ ...prod, id: Date.now() + Math.random(), cant: 1, subItems: [] });
-          this.verificarUpsell(prod.nombre);
+          this.verificarUpsell(prod);
         },
-        verificarUpsell(nombre) { const kw = ['BURGER', 'HAMBURGUESA', 'PERRO', 'PERRA', 'BURRITO', 'PATACON', 'PATACÓN', 'CARNE']; if (kw.some(k => nombre.toUpperCase().includes(k))) this.mostrarUpsell = true; },
-        aceptarUpsell() { let item = this.carrito.find(i => i.nombre === 'COMBO PAPAS'); if (item) item.cant++; else this.carrito.push({ nombre: 'COMBO PAPAS', precio: 4000, cant: 1, categoria: 'ADICION', id: Date.now(), subItems:[] }); this.mostrarUpsell = false; },
+        
+        verificarUpsell(prod) { 
+          const cat = prod.categoria.toUpperCase();
+          if (['BEBIDAS', 'ADICIÓN', 'ADICION', 'SALSA', 'EXTRA'].includes(cat)) return;
+
+          if (['HAMBURGUESAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS'].includes(cat)) {
+              this.upsellRecomendado = { tipo: 'COMBO' };
+              this.upsellFase = 1;
+              this.mostrarUpsell = true;
+          } else {
+              this.upsellRecomendado = { tipo: 'BEBIDA' };
+              this.upsellFase = 1;
+              this.mostrarUpsell = true;
+          }
+        },
+        
+        aceptarUpsell() { 
+          if (this.upsellRecomendado.tipo === 'COMBO') {
+              let item = this.carrito.find(i => i.nombre === 'COMBO PAPAS'); 
+              if (item) item.cant++; 
+              else this.carrito.push({ nombre: 'COMBO PAPAS', precio: 4000, cant: 1, categoria: 'ADICION', id: Date.now(), subItems:[] }); 
+              this.mostrarUpsell = false; 
+          } else if (this.upsellRecomendado.tipo === 'BEBIDA') {
+              this.upsellFase = 2;
+          }
+        },
+
+        agregarBebidaUpsell(bebida) {
+            this.mostrarUpsell = false;
+            this.procesarSeleccion(bebida);
+        },
+        
         modificarCantCarrito(index, delta) { this.carrito[index].cant += delta; if (this.carrito[index].cant <= 0) this.carrito.splice(index, 1); },
+
+        calcularDistancia() {
+          if (!this.cliente.direccion || this.cliente.tipo_pedido !== 'DOMICILIO') return;
+          this.calculandoTarifa = true;
+          this.errorDireccion = null;
+          
+          if (typeof google !== 'undefined') {
+             google.script.run.withSuccessHandler(res => {
+                this.calculandoTarifa = false;
+                if(res.error) {
+                   this.errorDireccion = res.error;
+                   this.tarifaCalculada = res.costo; 
+                } else {
+                   this.tarifaCalculada = res.costo;
+                }
+             }).calcularTarifa(this.cliente.direccion);
+          } else {
+             setTimeout(() => { this.calculandoTarifa = false; this.tarifaCalculada = 4000; }, 800);
+          }
+        },
 
         get desglose() {
           let sub = 0; let sls = 0; let cont = 0;
           let emp = ['DOMICILIO', 'PARA LLEVAR'].includes(this.cliente.tipo_pedido) ? 2000 : 0;
-          let dom = this.cliente.tipo_pedido === 'DOMICILIO' ? (2000 + (parseInt(this.cliente.distancia_km || 0) * 2000)) : 0;
+          let dom = this.cliente.tipo_pedido === 'DOMICILIO' ? this.tarifaCalculada : 0;
+          
           const procesarPrecio = (item, baseCant) => {
             if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
               for (let i = 0; i < (item.cant * baseCant); i++) { if (cont >= 2) sls += item.precio; cont++; }
@@ -410,6 +490,7 @@
           if (!this.tiendaAbierta) return alert("El restaurante se encuentra cerrado.");
           if (!this.cliente.nombre || this.cliente.celular.length < 10) return alert("⚠️ Nombre y celular válidos (10) requeridos.");
           if (this.cliente.tipo_pedido === 'DOMICILIO' && !this.cliente.direccion) return alert("⚠️ Dirección requerida.");
+          if (this.errorDireccion && this.cliente.tipo_pedido === 'DOMICILIO') return alert("⚠️ Corrige la dirección antes de continuar.");
           
           this.enviando = true; let tReserva = this.desglose.total; let payload = []; let contS = 0;
           let tipoCopia = this.cliente.tipo_pedido;
@@ -445,12 +526,31 @@
 
         cerrarModal() { this.modalConfirmacion = false; this.vista = 'catalogo'; window.scrollTo(0,0); },
         irARastreo() { this.modalConfirmacion = false; this.turnoRastreo = this.ticketConfirmado; this.vista = 'rastreo'; this.buscarOrden(); window.scrollTo(0,0); },
+        
         buscarOrden() {
-          if(!this.turnoRastreo.trim()) return; this.errorRastreo = false; this.estadoOrden = null;
-          let f = () => { typeof google!=='undefined' ? google.script.run.withSuccessHandler(r => { r.encontrado ? (this.estadoOrden=r, this.errorRastreo=false) : (!this.estadoOrden&&(this.errorRastreo=true)); }).buscarEstadoPedido(this.turnoRastreo.trim()) : this.errorRastreo=true; };
-          f(); if(this.pollingInterval) clearInterval(this.pollingInterval); this.pollingInterval = setInterval(f, 5000);
+          if(!this.turnoRastreo.trim()) return; this.errorRastreo = false; 
+          let f = () => { 
+            if (typeof google !== 'undefined') {
+              google.script.run.withSuccessHandler(r => { 
+                if (r.encontrado) {
+                  let strHash = r.estado + r.total;
+                  if (this.hashRastreoCache !== strHash) {
+                     this.estadoOrden = r;
+                     this.errorRastreo = false;
+                     this.hashRastreoCache = strHash;
+                  }
+                } else if (!this.estadoOrden) {
+                  this.errorRastreo = true;
+                }
+              }).buscarEstadoPedido(this.turnoRastreo.trim());
+            }
+          };
+          f(); 
+          if(this.pollingInterval) clearInterval(this.pollingInterval); 
+          this.pollingInterval = setInterval(f, 6000);
         },
-        detenerRastreo() { if(this.pollingInterval) clearInterval(this.pollingInterval); this.estadoOrden = null; this.turnoRastreo = ''; this.errorRastreo = false; this.vista = 'catalogo'; }
+        
+        detenerRastreo() { if(this.pollingInterval) clearInterval(this.pollingInterval); this.estadoOrden = null; this.hashRastreoCache = ''; this.turnoRastreo = ''; this.errorRastreo = false; this.vista = 'catalogo'; }
       }
     }
   </script>
