@@ -41,7 +41,6 @@
     
     #loader { position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; display: none; z-index: 100;}
 
-    /* Clases para la notificación de devueltas/cambio */
     .nota-cambio { background: #d4edda; color: #155724; padding: 8px; margin-top: 8px; border-radius: 6px; border: 2px solid #28a745; font-weight: bold; text-align: center; font-size: 16px; animation: parpadeoCambio 1.5s infinite; }
     @keyframes parpadeoCambio { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
   </style>
@@ -128,18 +127,24 @@
             let dirCompleta = String(p.direccion || "").trim() + ", Bello, Antioquia";
             let urlMapa = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(dirCompleta);
             
-            // Lógica de contacto directa - Sin filtros ni prefijos
+            // Bypass estricto de Sandbox y visibilidad de variable
             let rawTel = String(p.celular || p.telefono || "").trim();
-            let htmlContacto = '';
+            let htmlContacto = "";
             
             if (rawTel.length > 0) {
-               let telParaUrl = rawTel.replace(/\s+/g, '');
-               htmlContacto = `
-                  <a href="https://wa.me/${telParaUrl}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a>
-                  <a href="tel:${telParaUrl}" class="btn-action btn-call">📞 Llamar</a>
-               `;
+               let telLimpio = rawTel.replace(/\D/g, "");
+               
+               if (telLimpio.length === 10 && telLimpio.startsWith("3")) {
+                   telLimpio = "57" + telLimpio;
+               }
+               
+               if (telLimpio.length > 0) {
+                   htmlContacto = "<div style='font-size:16px; font-weight:bold; margin-bottom:8px; color:#333;'>📱 +" + telLimpio + "</div><a href='https://api.whatsapp.com/send?phone=" + telLimpio + "' target='_top' class='btn-action btn-wa'>💬 WhatsApp</a><a href='tel:+" + telLimpio + "' target='_top' class='btn-action btn-call'>📞 Llamar</a>";
+               } else {
+                   htmlContacto = "<span style='color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;'>❌ Teléfono inválido</span><br>";
+               }
             } else {
-               htmlContacto = '<span style="color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;">❌ Sin teléfono registrado</span><br>';
+               htmlContacto = "<span style='color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;'>❌ Sin teléfono registrado</span><br>";
             }
 
             let notasDesplegadas = '';
