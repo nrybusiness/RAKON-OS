@@ -12,13 +12,12 @@
     tailwind.config = { theme: { extend: { colors: { base: '#F7E4B2', oscuro: '#3D2B1F', acento: '#C78D2B', danger: '#dc3545' }, fontFamily: { sans: ['Quicksand', 'sans-serif'], display: ['Fredoka One', 'cursive'] } } } }
   </script>
   <style>
-    body { background-color: #F7E4B2; color: #3D2B1F; font-family: 'Quicksand', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #F7E4B2; color: #3D2B1F; font-family: 'Quicksand', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior-y: none; }
     h1, h2, h3, .font-display { font-family: 'Fredoka One', cursive; font-weight: normal; }
     .loader { border-top-color: #C78D2B; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
     @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scroll-hide::-webkit-scrollbar { display: none; }
-    .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    html { scroll-behavior: smooth; }
+    .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body x-data="menuApp()" x-init="init()" class="antialiased pb-24 relative" :class="{'overflow-hidden': modalPersonalizar || modalBebida || modalConfirmacion || mostrarUpsell}">
@@ -32,7 +31,8 @@
 
   <div x-show="vista === 'catalogo'" x-transition.opacity>
     <header class="bg-oscuro text-base py-12 px-4 text-center shadow-md relative overflow-hidden">
-      <div class="relative z-10">
+      <div class="relative z-10 flex flex-col items-center">
+        <img src="https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34" alt="Mascota Saludo" class="h-40 object-contain drop-shadow-2xl mb-4">
         <h1 class="text-4xl md:text-5xl tracking-wide mb-2 text-acento">HUNGER BURGERS</h1>
         <p class="text-md md:text-lg font-semibold tracking-widest opacity-90 mb-6">¿LISTO PARA EL PRIMER MORDISCO?</p>
         <div class="flex justify-center gap-4">
@@ -41,7 +41,10 @@
       </div>
     </header>
 
-    <div x-show="cargando" class="flex justify-center items-center py-20"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div></div>
+    <div x-show="cargando" class="flex flex-col justify-center items-center py-20">
+      <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" alt="Cargando Menu" class="h-32 object-contain animate-pulse mb-6 drop-shadow-lg">
+      <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+    </div>
 
     <nav x-show="!cargando" class="sticky z-40 bg-base border-b-2 border-acento shadow-md py-3 px-4 flex gap-3 overflow-x-auto scroll-hide w-full" :class="tiendaAbierta ? 'top-[28px]' : 'top-9'">
       <template x-for="cat in categoriasUnicas" :key="cat">
@@ -74,7 +77,7 @@
     <div class="bg-base w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
       <div class="p-5 border-b border-[#e5d4a5] flex justify-between items-center bg-oscuro text-base sm:rounded-t-2xl rounded-t-2xl">
         <h2 class="text-xl font-display leading-tight">PERSONALIZAR<br><span class="text-acento text-lg" x-text="platoActivo?.nombre"></span></h2>
-        <button @click="modalPersonalizar = false" class="text-3xl font-bold text-acento hover:text-white transition">&times;</button>
+        <button @click="modalPersonalizar = false" class="text-3xl font-bold text-acento hover:text-white transition">×</button>
       </div>
       <div class="p-5 overflow-y-auto scroll-hide flex-grow bg-white">
         <h3 class="font-bold text-oscuro mb-3 border-b-2 border-acento pb-1 uppercase">Extras y Adiciones</h3>
@@ -210,6 +213,9 @@
   <div x-show="vista === 'rastreo'" class="p-4 max-w-xl mx-auto pt-12 text-center" style="display:none;">
     <button @click="detenerRastreo()" class="text-oscuro font-bold mb-8 flex items-center gap-2 hover:text-acento transition mx-auto"><span>⬅️</span> Volver al Menú</button>
     <h2 class="text-3xl font-display mb-6">RASTREAR ORDEN</h2>
+    
+    <img :src="imagenRastreo" alt="Estado Orden" class="h-40 mx-auto mb-6 object-contain drop-shadow-lg transition-all duration-300">
+    
     <input type="text" x-model="turnoRastreo" placeholder="Ej: 1234" class="w-full text-center border-2 border-oscuro p-4 rounded-xl text-xl mb-4 shadow-sm focus:outline-none focus:border-acento">
     <button @click="buscarOrden" class="bg-oscuro text-white px-8 py-4 rounded-md font-bold font-display tracking-widest text-lg w-full mb-6">BUSCAR</button>
     
@@ -219,6 +225,19 @@
         <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
       </div>
       <p class="text-2xl font-display text-oscuro mb-2" x-text="estadoOrden?.estado"></p>
+      
+      <div class="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-200">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-2 border-b border-gray-200 pb-1">Resumen del pedido:</p>
+        <ul class="text-sm text-oscuro divide-y divide-gray-200">
+          <template x-for="item in estadoOrden?.items" :key="Math.random()">
+            <li class="py-1 flex justify-between items-center">
+              <span class="font-semibold" x-text="item.nombre"></span>
+              <span class="bg-gray-200 text-xs font-bold px-2 py-0.5 rounded-full text-oscuro">x<span x-text="item.cant"></span></span>
+            </li>
+          </template>
+        </ul>
+      </div>
+
       <p class="text-sm font-bold">Total a pagar: $<span x-text="estadoOrden?.total?.toLocaleString() || 0"></span></p>
       <p class="text-sm text-gray-500 uppercase mt-1" x-text="estadoOrden?.tipo"></p>
     </div>
@@ -267,6 +286,16 @@
         modalConfirmacion: false, ticketConfirmado: '', totalConfirmado: 0,
         mostrarUpsell: false, modalPersonalizar: false, platoActivo: null, subItemsActivos: [], 
         modalBebida: false, bebidaActiva: null, bebidaRequiereBase: false, bebidaBase: '',
+
+        get imagenRastreo() {
+          if (!this.estadoOrden) return 'https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34';
+          let est = this.estadoOrden.estado || '';
+          if (est.includes('PENDIENTE')) return 'https://humgerimages.carrd.co/assets/images/image08.png?v=9dc15a34';
+          if (est.includes('COCINA')) return 'https://humgerimages.carrd.co/assets/images/image12.png?v=9dc15a34';
+          if (est.includes('REPARTO') || est.includes('DOMICILIO')) return 'https://humgerimages.carrd.co/assets/images/image07.png?v=9dc15a34';
+          if (est.includes('PAGAR')) return 'https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34';
+          return 'https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34';
+        },
 
         init() {
           let guardadoCart = localStorage.getItem('rakon_cart'); if (guardadoCart) this.carrito = JSON.parse(guardadoCart);
