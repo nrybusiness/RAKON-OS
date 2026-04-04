@@ -9,7 +9,7 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
     .header-general { background-color: #212529; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .header-title { margin: 0; font-size: 1.2rem; }
-    .admin-bar { background-color: #343a40; color: white; padding: 10px 15px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .admin-bar { background-color: #343a40; color: white; padding: 10px 15px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
     .admin-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; font-size: 14px;}
     .admin-btn:hover { background: #5a6268; }
     .btn-red { background: #dc3545; color: white; } .btn-red:hover { background: #c82333; }
@@ -82,6 +82,15 @@
     <button class="admin-btn btn-blue" onclick="abrirModalCompras()">🛒 Compras</button>
     <button class="admin-btn btn-yellow" onclick="abrirModalMermas()">🗑️ Mermas</button>
     <button class="admin-btn btn-red" onclick="confirmarCierre()">📅 Cierre Turno</button>
+
+    <div style="display: flex; align-items: center; gap: 8px; background: #212529; padding: 5px 12px; border-radius: 5px; margin-left: auto; border: 1px solid #495057;">
+       <span style="font-size: 13px; font-weight: bold; color: #f8f9fa;">ESTADO APP:</span>
+       <select id="estadoLocalSelect" onchange="cambiarEstadoLocal(this.value)" style="padding: 6px; border-radius: 4px; background: #343a40; color: white; border: 1px solid #6c757d; font-weight: bold; cursor: pointer; outline: none;">
+          <option value="AUTO">🤖 AUTO (5PM - 1AM)</option>
+          <option value="ABIERTO">✅ FORZAR ABIERTO</option>
+          <option value="CERRADO">❌ FORZAR CERRADO</option>
+       </select>
+    </div>
   </div>
 
   <div id="alertaInventario" class="alerta-inventario"></div>
@@ -253,7 +262,11 @@
   <script>
     const esAdmin = true;
 
-    window.onload = () => { cargarSistemaCentral(); };
+    // Se inicializa cargando los tickets y además el estado de la tienda
+    window.onload = () => { 
+        cargarSistemaCentral(); 
+        cargarEstadoLocal();
+    };
 
     let ticketsConocidos = []; 
     let alarmasActivadas = true; 
@@ -277,6 +290,22 @@
     function errorServidor(e) {
       document.getElementById('loadingOverlay').style.display = 'none';
       alert("❌ Error: " + (e.message || e));
+    }
+
+    // FUNCIONES DEL NUEVO CONTROL DE ESTADO
+    function cargarEstadoLocal() {
+      google.script.run.withSuccessHandler(res => {
+        if(document.getElementById('estadoLocalSelect')) {
+           document.getElementById('estadoLocalSelect').value = res || 'AUTO';
+        }
+      }).obtenerEstadoLocal();
+    }
+
+    function cambiarEstadoLocal(estado) {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => {
+        document.getElementById('loadingOverlay').style.display = 'none';
+      }).fijarEstadoLocal(estado);
     }
 
     document.body.addEventListener('click', function() {
