@@ -31,7 +31,10 @@
 <body class="antialiased pb-12">
 
   <header class="bg-[#212529] text-white p-4 shadow-md flex justify-between items-center border-b-4 border-acento sticky top-0 z-50">
-    <h1 class="text-2xl font-display tracking-widest text-white">🍔 Hunger Admin / POS</h1>
+    <div class="flex items-center gap-3">
+      <img src="https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34" alt="Mascota" class="h-10">
+      <h1 class="text-2xl font-display tracking-widest text-white">🍔 Hunger Admin / POS</h1>
+    </div>
     <div class="bg-green-600 px-4 py-2 rounded-lg font-bold text-sm shadow-inner flex items-center gap-2 cursor-default">
       <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> Alarma ON
     </div>
@@ -58,7 +61,10 @@
   </div>
 
   <div class="p-6 max-w-full mx-auto flex flex-wrap gap-6 justify-center items-start" id="ticketsContainer">
-    <h3 class="text-gray-500 font-bold text-xl w-full text-center mt-10">Cargando pedidos...</h3>
+    <div class="w-full flex flex-col items-center justify-center mt-10">
+      <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" class="h-32 drop-shadow-xl mb-4 animate-pulse">
+      <h3 class="text-gray-500 font-bold text-xl">Cargando pedidos...</h3>
+    </div>
   </div>
 
   <audio id="sonidoAlarma" preload="auto">
@@ -320,7 +326,6 @@
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).marcarPedidoRushRemoto(id);
     }
 
-    // LÓGICA POS
     function buscarUniversalPOS(texto) {
       let txt = texto.toLowerCase(); let allItems = [...arrPrincipales, ...arrExtras, ...arrBebidas];
       let gridsToHide = ['gridPrincipal', 'gridExtras', 'gridBebidas'];
@@ -484,7 +489,6 @@
       else { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).guardarPedidoPOS(datosCliente, JSON.stringify(carritoParaEnviar)); }
     }
 
-    // MODALES AUXILIARES
     function confirmarCierre() { if(!confirm("¿Estás seguro de realizar el Cierre de Turno?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; google.script.run.withFailureHandler(errorServidor).withSuccessHandler((resumen) => { document.getElementById('loadingOverlay').style.display = 'none'; mostrarModalCierre(resumen); cargarSistemaCentral(); }).ejecutarCierreTurnoKDS(); }
     function mostrarModalCierre(res) { let pagosHtml = ""; for(let m in res.pagos) pagosHtml += `<li class="flex justify-between border-b border-gray-200 py-1"><span>${m}:</span> <strong>$${res.pagos[m].toLocaleString()}</strong></li>`; document.getElementById('resVentas').innerText = res.ventas; document.getElementById('resTotal').innerText = "$" + res.total.toLocaleString(); document.getElementById('resUtilidad').innerText = "$" + res.utilidad.toLocaleString(); document.getElementById('resAnulados').innerText = res.anulados; document.getElementById('resPagos').innerHTML = pagosHtml || "<li>Sin ingresos</li>"; document.getElementById('modalCierre').style.display = 'flex'; }
     function cerrarModalCierre() { document.getElementById('modalCierre').style.display = 'none'; }
@@ -511,7 +515,6 @@
     function dibujarCarrito() { const tbody = document.getElementById('bodyCarrito'); tbody.innerHTML = ""; let granTotal = 0; carritoCompras.forEach((item, idx) => { granTotal += item.costoTotal; tbody.innerHTML += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-right text-gray-600 font-bold">$${item.costoTotal.toLocaleString()}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarDelCarrito(${idx})">X</button></td></tr>`; }); document.getElementById('totalCarritoTexto').innerText = granTotal.toLocaleString(); }
     function enviarLoteCompras() { if (carritoCompras.length === 0) return; if(!confirm("¿Registrar compras?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; cerrarModalCompras(); google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; carritoCompras = []; dibujarCarrito(); cargarSistemaCentral(); alert("✅ Compras ingresadas."); }).doPost({ parameter: { accion: "guardar_compras_lote", compras_data: JSON.stringify(carritoCompras) } }); }
 
-    // CARGA DE TICKETS (PRIORIDAD)
     function cargarSistemaCentral() {
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarTickets).obtenerPedidosKDS();
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarAlertaInventario).obtenerAlertasInventario();
@@ -524,11 +527,13 @@
 
     function dibujarTickets(datos) {
       const container = document.getElementById('ticketsContainer'); datosKDSGlobal = datos; 
-      if (!datos || datos.length === 0) { container.innerHTML = "<h3 class='text-gray-500 font-bold text-xl w-full text-center mt-10'>Sin operaciones en curso ✅</h3>"; ticketsConocidos = []; primeraCarga = false; return; }
+      if (!datos || datos.length === 0) { 
+        container.innerHTML = "<div class='w-full flex flex-col items-center justify-center mt-10'><img src='https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34' class='h-48 drop-shadow-xl mb-4'><h3 class='text-gray-500 font-bold text-xl'>Sin operaciones en curso ✅</h3></div>"; 
+        ticketsConocidos = []; primeraCarga = false; return; 
+      }
 
-      const noOrdersMsg = container.querySelector('h3'); if(noOrdersMsg) noOrdersMsg.remove();
+      const noOrdersMsg = container.querySelector('div.w-full'); if(noOrdersMsg) noOrdersMsg.remove();
 
-      // ORDENAMIENTO POR RUSH/LOCAL
       datos.sort((a, b) => {
           let aRush = a.tipo.includes('⚡') || (a.notas && a.notas.includes('RUSH ⚡')); let bRush = b.tipo.includes('⚡') || (b.notas && b.notas.includes('RUSH ⚡'));
           if (aRush && !bRush) return -1; if (!aRush && bRush) return 1; return 0; 
@@ -614,7 +619,6 @@
 </body>
 </html>
 <script>
-    // Nueva función Maestra de Alarma
     function dispararAlarma() {
       if (!alarmasActivadas || !audioDesbloqueado) {
         console.log("Alarma bloqueada: Esperando interacción del usuario.");
@@ -629,7 +633,6 @@
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           console.error("Fallo audio externo, iniciando Beep de emergencia:", error);
-          // GENERADOR DE BEEP SINTÉTICO (No depende de archivos externos)
           const context = new (window.AudioContext || window.webkitAudioContext)();
           const osc = context.createOscillator();
           const gain = context.createGain();
