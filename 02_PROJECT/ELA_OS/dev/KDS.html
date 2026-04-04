@@ -23,7 +23,10 @@
 <body class="antialiased pb-12">
 
   <header class="bg-black p-4 shadow-md flex justify-between items-center border-b-2 border-acento sticky top-0 z-50">
-    <h1 class="text-2xl font-display tracking-widest text-acento">KDS COCINA</h1>
+    <div class="flex items-center gap-3">
+      <img src="https://humgerimages.carrd.co/assets/images/image12.png?v=9dc15a34" alt="KDS" class="h-12">
+      <h1 class="text-2xl font-display tracking-widest text-acento">KDS COCINA</h1>
+    </div>
     <div class="bg-green-600 px-3 py-1.5 rounded-lg text-white font-bold text-xs shadow-inner flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> ALARMA ON
     </div>
@@ -47,7 +50,10 @@
   </div>
 
   <div class="p-6 max-w-full mx-auto flex flex-wrap gap-5 justify-center items-start" id="ticketsContainer">
-    <h3 class="text-gray-500 font-bold text-xl mt-10">Cargando pedidos...</h3>
+    <div class="w-full flex flex-col items-center justify-center mt-10">
+      <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" class="h-32 drop-shadow-xl mb-4 animate-pulse">
+      <h3 class="text-gray-500 font-bold text-xl">Cargando pedidos...</h3>
+    </div>
   </div>
 
   <script>
@@ -86,9 +92,12 @@
 
     function dibujarTickets(datos) {
       const container = document.getElementById('ticketsContainer'); datosKDSGlobal = datos; 
-      if (!datos || datos.length === 0) { container.innerHTML = "<h3 class='text-gray-500 font-bold text-2xl mt-10'>No hay pedidos activos 🍔</h3>"; ticketsConocidos = []; primeraCarga = false; return; }
+      if (!datos || datos.length === 0) { 
+        container.innerHTML = "<div class='w-full flex flex-col items-center justify-center mt-10'><img src='https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34' class='h-48 drop-shadow-xl mb-4'><h3 class='text-gray-500 font-bold text-2xl'>No hay pedidos activos 🍔</h3></div>"; 
+        ticketsConocidos = []; primeraCarga = false; return; 
+      }
 
-      const noOrdersMsg = container.querySelector('h3'); if(noOrdersMsg) noOrdersMsg.remove();
+      const noOrdersMsg = container.querySelector('div.w-full'); if(noOrdersMsg) noOrdersMsg.remove();
 
       datos.sort((a, b) => {
           let aRush = a.tipo.includes('⚡') || (a.notas && a.notas.includes('RUSH ⚡'));
@@ -106,7 +115,6 @@
       datos.forEach(p => {
         let isRush = p.tipo.includes('⚡') || (p.notas && p.notas.includes('RUSH ⚡'));
         
-        // FIX: Se reemplaza text-white por text-oscuro para la visualización sobre fondo blanco
         let itemsHtml = p.itemsObj.map(item => `
           <li class="flex justify-between items-center py-2 border-b border-dashed border-gray-300">
             <span class="font-semibold text-lg text-oscuro">${item.nombre} <span class="text-acento font-bold ml-1">(x${item.cant})</span></span>
@@ -160,9 +168,7 @@
   </script>
 </body>
 </html>
-
 <script>
-    // Nueva función Maestra de Alarma
     function dispararAlarma() {
       if (!alarmasActivadas || !audioDesbloqueado) {
         console.log("Alarma bloqueada: Esperando interacción del usuario.");
@@ -177,7 +183,6 @@
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           console.error("Fallo audio externo, iniciando Beep de emergencia:", error);
-          // GENERADOR DE BEEP SINTÉTICO (No depende de archivos externos)
           const context = new (window.AudioContext || window.webkitAudioContext)();
           const osc = context.createOscillator();
           const gain = context.createGain();
