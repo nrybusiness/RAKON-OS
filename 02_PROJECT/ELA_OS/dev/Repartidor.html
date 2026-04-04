@@ -38,6 +38,10 @@
     .btn-ticket:disabled { background: #e9ecef !important; color: #adb5bd !important; cursor: not-allowed; border: 1px solid #ced4da;}
     
     #loader { position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; display: none; z-index: 100;}
+
+    /* Clases para la notificación de devueltas/cambio */
+    .nota-cambio { background: #d4edda; color: #155724; padding: 8px; margin-top: 8px; border-radius: 6px; border: 2px solid #28a745; font-weight: bold; text-align: center; font-size: 16px; animation: parpadeoCambio 1.5s infinite; }
+    @keyframes parpadeoCambio { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
@@ -78,6 +82,23 @@
         }
 
         let urlMapa = "https://maps.google.com/?q=" + encodeURIComponent(p.direccion);
+        
+        // CORRECCIÓN: Unificar variables de teléfono por si el backend envía uno u otro.
+        let telefonoCliente = p.celular || p.telefono;
+
+        // LÓGICA PARA RESALTAR EL CAMBIO/VUELTAS
+        let notasDesplegadas = '';
+        if (p.notas) {
+           if (p.notas.includes('[💵 LLEVAR CAMBIO')) {
+              let parts = p.notas.split('\n');
+              let cambioStr = parts.find(s => s.includes('[💵'));
+              let otras = parts.filter(s => !s.includes('[💵')).join(' ');
+              notasDesplegadas = `<div class="nota-cambio">${cambioStr}</div>`;
+              if(otras && otras.trim() !== '') notasDesplegadas += `<div style="font-weight:normal; font-size:14px; margin-top:5px; color:#dc3545;">📝 ${otras}</div>`;
+           } else {
+              notasDesplegadas = `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${p.notas}</div>`;
+           }
+        }
 
         return `
         <div class="ticket ${claseBorde}">
@@ -89,17 +110,17 @@
           <div class="t-cliente">👤 ${p.cliente}</div>
           
           <div>
-            ${p.celular ? `
-              <a href="https://wa.me/57${p.celular}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a> 
-              <a href="tel:${p.celular}" class="btn-action btn-call">📞 Llamar</a>
-            ` : '<span style="color:red; font-size:12px;">Sin teléfono</span><br>'}
+            ${telefonoCliente ? `
+              <a href="https://wa.me/57${telefonoCliente}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a> 
+              <a href="tel:${telefonoCliente}" class="btn-action btn-call">📞 Llamar</a>
+            ` : '<span style="color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;">❌ Sin teléfono registrado</span><br>'}
             
             <a href="${urlMapa}" target="_blank" class="btn-action btn-map">🗺️ Mapa</a>
           </div>
 
           <div class="t-direccion">
             📍 ${p.direccion}
-            ${p.notas ? `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${p.notas}</div>` : ''}
+            ${notasDesplegadas}
           </div>
           
           <ul class="item-list">${p.items.map(i => `<li>• ${i}</li>`).join('')}</ul>
