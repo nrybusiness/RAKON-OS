@@ -58,6 +58,7 @@ function buscarEstadoPedido(turnoBuscado) {
   let metodo = "EFECTIVO";
   let totalCalculado = 0;
   let encontrado = false;
+  let items = [];
 
   for (let i = d.length - 1; i >= 1; i--) { 
     let idCompleto = d[i][0] ? String(d[i][0]).trim() : "";
@@ -77,6 +78,11 @@ function buscarEstadoPedido(turnoBuscado) {
     let idCompleto = d[i][0] ? String(d[i][0]).trim() : "";
     if (idCompleto === idOficial) {
       totalCalculado += (Number(d[i][8]) || 0);
+      let nombreItem = d[i][1] ? String(d[i][1]).trim() : "";
+      let cantItem = Number(d[i][2]) || 1;
+      if (nombreItem && nombreItem !== "ORDEN VACÍA") {
+        items.push({ nombre: nombreItem, cant: cantItem });
+      }
     }
   }
 
@@ -86,7 +92,8 @@ function buscarEstadoPedido(turnoBuscado) {
     estado: estado,
     tipo: tipo,
     total: totalCalculado,
-    metodo: metodo
+    metodo: metodo,
+    items: items
   };
 }
 
@@ -95,17 +102,15 @@ function obtenerMenuPOS() {
   const shR = ss.getSheetByName("RECETAS");
   if (!shR) return [];
   const data = shR.getDataRange().getValues();
-  
   let mapPOS = {};
   let reqEmpaque = {};
-  let catMap = {}; 
-
+  let catMap = {};
   for (let i = 1; i < data.length; i++) {
     let prod = String(data[i][0]).trim().toUpperCase();
     let ing = String(data[i][1]).trim().toUpperCase();
     let precio = Number(data[i][4]) || 0;
     let categoriaRaw = String(data[i][5] || "").trim().toUpperCase();
-    let imgUrl = String(data[i][6] || "").trim(); // Mapeo de Columna G (Imágenes)
+    let imgUrl = String(data[i][6] || "").trim();
 
     if (!prod) continue;
     if (categoriaRaw !== "" && !catMap[prod]) {
@@ -709,7 +714,8 @@ function motorInventario(ss, prod, cant, modoA, omitir = [], cacheHojasObj = {},
             shI.getRange(j + 1, 5).setValue(stockActualCalculado);
             let stockMinimo = Number(dI[j][7]) || 0;
             if (stockActualCalculado <= stockMinimo) { shI.getRange(j + 1, 5).setBackground("#ea9999"); } 
-            else { shI.getRange(j + 1, 5).setBackground(null); }
+            else { shI.getRange(j + 1, 5).setBackground(null);
+            }
             
             dI[j][3] = nuevasSalidas;
             break;
@@ -742,7 +748,8 @@ function motorInventario(ss, prod, cant, modoA, omitir = [], cacheHojasObj = {},
           shI.getRange(j + 1, 5).setValue(stockActualCalculado);
           let stockMinimo = Number(dI[j][7]) || 0;
           if (stockActualCalculado <= stockMinimo) { shI.getRange(j + 1, 5).setBackground("#ea9999"); } 
-          else { shI.getRange(j + 1, 5).setBackground(null); }
+          else { shI.getRange(j + 1, 5).setBackground(null);
+          }
           
           dI[j][3] = nuevasSalidas;
           return; 
@@ -1116,7 +1123,7 @@ function actualizarOcrearCliente(cel, nom, fecha) {
   let fE = -1;
   for (let i = 1; i < dC.length; i++) { 
     if (dC[i][0] && String(dC[i][0]).trim() === celBuscado) { fE = i + 1;
-break; } 
+      break; } 
   }
   if (fE !== -1) {
     shC.getRange(fE, 3).setValue(fecha);
