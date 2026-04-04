@@ -1275,3 +1275,18 @@ function fijarEstadoLocal(estado) {
   PropertiesService.getScriptProperties().setProperty('ESTADO_LOCAL', estado);
   return estado;
 }
+
+function marcarPedidoRushRemoto(idStr) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('PEDIDOS_ACTIVOS');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(idStr)) {
+      let notasActuales = data[i][9] || "";
+      if (!notasActuales.includes("[RUSH ⚡]")) {
+         sheet.getRange(i + 1, 10).setValue("[RUSH ⚡] " + notasActuales);
+      }
+      return true;
+    }
+  }
+  return false;
+}
