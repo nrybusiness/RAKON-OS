@@ -41,7 +41,8 @@ function doGet(e) {
   tmp.modo = modo;
   return tmp.evaluate()
       .setTitle('Hunger Burgers - ' + modo.toUpperCase())
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1');
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // <-- Directiva inyectada correctamente
 }
 
 function doPost(e) {
