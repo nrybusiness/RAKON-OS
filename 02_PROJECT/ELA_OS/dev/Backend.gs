@@ -105,6 +105,7 @@ function obtenerMenuPOS() {
     let ing = String(data[i][1]).trim().toUpperCase();
     let precio = Number(data[i][4]) || 0;
     let categoriaRaw = String(data[i][5] || "").trim().toUpperCase();
+    let imgUrl = String(data[i][6] || "").trim(); // Mapeo de Columna G (Imágenes)
 
     if (!prod) continue;
     if (categoriaRaw !== "" && !catMap[prod]) {
@@ -112,8 +113,8 @@ function obtenerMenuPOS() {
     }
 
     if (precio > 0) {
-        if (mapPOS[prod] === undefined || (mapPOS[prod] === 0 && precio > 0)) {
-            mapPOS[prod] = precio;
+        if (mapPOS[prod] === undefined || mapPOS[prod].precio === 0) {
+            mapPOS[prod] = { precio: precio, imagen: imgUrl };
         }
     }
     if (/\[LLEVAR\]/i.test(ing)) reqEmpaque[prod] = true;
@@ -126,7 +127,8 @@ function obtenerMenuPOS() {
     if (catOficial.includes("INGREDIENTE") || prod === "EMPAQUE LLEVAR" || prod === "COSTO EMPAQUE") continue;
     catalogo.push({ 
         nombre: prod, 
-        precio: mapPOS[prod], 
+        precio: mapPOS[prod].precio, 
+        imagen: mapPOS[prod].imagen,
         requiereEmpaque: !!reqEmpaque[prod],
         categoria: catOficial 
     });
@@ -1263,4 +1265,13 @@ function ejecutarConfirmacionPagoRemoto(turno) {
     }
   }
   return "OK";
+}
+
+function obtenerEstadoLocal() {
+  return PropertiesService.getScriptProperties().getProperty('ESTADO_LOCAL') || 'AUTO';
+}
+
+function fijarEstadoLocal(estado) {
+  PropertiesService.getScriptProperties().setProperty('ESTADO_LOCAL', estado);
+  return estado;
 }
