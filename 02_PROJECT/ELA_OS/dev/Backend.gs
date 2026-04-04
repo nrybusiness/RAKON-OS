@@ -7,7 +7,7 @@ const COSTO_EMPAQUE_FIJO = 2000;
 const VALOR_BASE_DOMICILIO = 2000;
 const VALOR_KM_ADICIONAL = 2000;
 const RADIO_MAXIMO_KM = 5;
-const ORIGEN_RESTAURANTE = "Cl 20E #42-12, Zamora, Bello, Antioquia"; // Ajusta a la ubicación exacta de Hunger Burgers si es necesario
+const ORIGEN_RESTAURANTE = "Cl 20E #42-12, Zamora, Bello, Antioquia";
 
 function getRecetasCached() {
   const cache = CacheService.getScriptCache();
