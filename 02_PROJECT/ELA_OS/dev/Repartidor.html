@@ -47,8 +47,16 @@
 <body>
 
 <div id="loader">Actualizando visor...</div>
-<div class="header"><h2>🛵 Visor de Domicilios</h2></div>
-<div id="pantalla-reparto" class="grid-tickets">Cargando pedidos...</div>
+<div class="header">
+  <img src="https://humgerimages.carrd.co/assets/images/image07.png?v=9dc15a34" alt="Moto" style="height: 80px; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+  <h2 style="margin: 0;">🛵 Visor de Domicilios</h2>
+</div>
+<div id="pantalla-reparto" class="grid-tickets">
+  <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;">
+    <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" style="height: 120px; animation: parpadeoCambio 1.5s infinite; margin-bottom: 15px;">
+    <h3 style="text-align:center; color:#6c757d;">Cargando pedidos...</h3>
+  </div>
+</div>
 
 <script>
   let procesando = false;
@@ -82,11 +90,8 @@
         }
 
         let urlMapa = "https://maps.google.com/?q=" + encodeURIComponent(p.direccion);
-        
-        // CORRECCIÓN: Unificar variables de teléfono por si el backend envía uno u otro.
         let telefonoCliente = p.celular || p.telefono;
 
-        // LÓGICA PARA RESALTAR EL CAMBIO/VUELTAS
         let notasDesplegadas = '';
         if (p.notas) {
            if (p.notas.includes('[💵 LLEVAR CAMBIO')) {
@@ -132,7 +137,7 @@
 
           ${botonHTML}
         </div>`;
-      }).join('') || '<h3 style="text-align:center; color:#6c757d; grid-column: 1 / -1;">No hay domicilios activos ✅</h3>';
+      }).join('') || '<div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;"><img src="https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34" style="height: 160px; filter: drop-shadow(0 10px 8px rgba(0,0,0,0.1)); margin-bottom: 15px;"><h3 style="text-align:center; color:#6c757d;">No hay domicilios activos ✅</h3></div>';
       
       if (!procesando) setTimeout(cargarRepartos, 5000); 
     }).obtenerPedidosReparto();
