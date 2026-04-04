@@ -1,354 +1,308 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hunger Burgers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        .font-header { font-family: 'Fredoka One', cursive; }
-        .font-body { font-family: 'Quicksand', sans-serif; }
-        html { scroll-behavior: smooth; }
-    </style>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hunger Burgers - Express</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { base: '#F7E4B2', oscuro: '#3D2B1F', acento: '#C78D2B', danger: '#dc3545' },
+          fontFamily: { sans: ['Quicksand', 'sans-serif'], display: ['Fredoka One', 'cursive'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #F7E4B2; color: #3D2B1F; font-family: 'Quicksand', sans-serif; -webkit-tap-highlight-color: transparent; }
+    h1, h2, h3, .font-display { font-family: 'Fredoka One', cursive; font-weight: normal; }
+    .loader { border-top-color: #C78D2B; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
-<body class="bg-[#F7E4B2] text-[#3D2B1F] font-body antialiased" x-data="burgerApp()">
+<body x-data="menuApp()" x-init="init()" class="antialiased pb-24">
 
-    <!-- MÓDULO HERO -->
-    <header class="min-h-screen flex flex-col justify-center items-center text-center p-6 border-b-8 border-[#3D2B1F]">
-        <h1 class="font-header text-6xl md:text-8xl text-[#C78D2B] mb-4 drop-shadow-sm">HUNGER BURGERS</h1>
-        <h2 class="font-body font-bold text-xl md:text-2xl mb-10 tracking-widest text-[#3D2B1F]">¿LISTO PARA EL PRIMER MORDISCO?</h2>
-        <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-            <button @click="document.getElementById('catalogo').scrollIntoView()" 
-                    class="flex-1 bg-[#C78D2B] text-[#F7E4B2] font-header text-2xl py-4 rounded-xl active:scale-95 transition-transform">
-                MENU
-            </button>
-            <button @click="aiModalOpen = true" class="flex-1 border-4 border-[#3D2B1F] text-[#3D2B1F] font-header text-2xl py-4 rounded-xl active:scale-95 transition-transform bg-white/20 hover:bg-white/40">
-                ✨ CHEF IA
-            </button>
+  <div x-show="vista === 'catalogo'" x-transition.opacity>
+    
+    <header class="bg-oscuro text-base py-12 px-4 text-center shadow-md relative overflow-hidden">
+      <div class="relative z-10">
+        <h1 class="text-4xl md:text-5xl tracking-wide mb-2 text-acento">HUNGER BURGERS</h1>
+        <p class="text-md md:text-lg font-semibold tracking-widest opacity-90 mb-6">¿LISTO PARA EL PRIMER MORDISCO?</p>
+        <div class="flex justify-center gap-4">
+          <button @click="scrollMenu" class="bg-acento text-white px-6 py-2 rounded-md font-display tracking-wide shadow-lg hover:bg-yellow-600 transition">MENÚ</button>
+          <button onclick="alert('Módulo de rastreo en desarrollo.')" class="border-2 border-acento text-acento px-6 py-2 rounded-md font-display tracking-wide hover:bg-acento hover:text-white transition">RASTREAR</button>
         </div>
+      </div>
     </header>
 
-    <!-- CATÁLOGO DE PRODUCTOS -->
-    <section id="catalogo" class="p-6 py-16 max-w-6xl mx-auto min-h-screen flex flex-col justify-center">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <template x-for="product in products" :key="product.id">
-                <article class="border-4 border-[#3D2B1F] rounded-2xl p-6 flex flex-col justify-between bg-white/30">
-                    <div>
-                        <h3 class="font-header text-2xl text-[#C78D2B] mb-2" x-text="product.name"></h3>
-                        <p class="font-semibold text-sm mb-6 leading-relaxed" x-text="product.desc"></p>
-                    </div>
-                    <div class="flex justify-between items-center mt-auto pt-4 border-t-2 border-[#3D2B1F]/20">
-                        <span class="font-header text-xl" x-text="formatPrice(product.price)"></span>
-                        <button @click="addToCart(product)" class="bg-[#3D2B1F] text-[#F7E4B2] px-6 py-2 rounded-lg font-bold active:scale-95 transition-transform uppercase text-sm">
-                            Añadir
-                        </button>
-                    </div>
-                </article>
-            </template>
-        </div>
-    </section>
-
-    <!-- MÓDULO CHECKOUT Y CARRITO -->
-    <section class="p-6 py-16 max-w-5xl mx-auto border-t-8 border-[#3D2B1F]">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            <!-- Carrito -->
-            <div class="border-4 border-[#3D2B1F] rounded-2xl p-6 bg-white/30 h-fit">
-                <h3 class="font-header text-3xl mb-6 border-b-4 border-[#3D2B1F] pb-2">TU ORDEN</h3>
-                
-                <template x-if="cart.length === 0">
-                    <p class="font-semibold opacity-60 text-center py-8">No hay elementos en el sistema.</p>
-                </template>
-
-                <div class="space-y-4 mb-6 max-h-64 overflow-y-auto pr-2">
-                    <template x-for="(item, index) in cart" :key="index">
-                        <div class="flex justify-between items-center border-b-2 border-[#3D2B1F]/10 pb-2">
-                            <div>
-                                <span class="font-bold block" x-text="item.name"></span>
-                                <span class="text-sm font-semibold opacity-75" x-text="formatPrice(item.price)"></span>
-                            </div>
-                            <button @click="removeFromCart(index)" class="text-[#F7E4B2] bg-[#3D2B1F] font-bold w-8 h-8 rounded-md active:scale-95 flex items-center justify-center">
-                                ×
-                            </button>
-                        </div>
-                    </template>
-                </div>
-
-                <div class="border-t-4 border-[#3D2B1F] pt-4 font-semibold space-y-2">
-                    <div class="flex justify-between">
-                        <span>Subtotal</span>
-                        <span x-text="formatPrice(subtotal)"></span>
-                    </div>
-                    
-                    <template x-if="form.location === 'llevar'">
-                        <div class="flex justify-between text-[#C78D2B]">
-                            <span>Desechables</span>
-                            <span x-text="formatPrice(config.packagingFee)"></span>
-                        </div>
-                    </template>
-
-                    <div class="flex justify-between items-center py-2">
-                        <span>Salsas (2 gratis)</span>
-                        <div class="flex items-center gap-3">
-                            <button @click="if(form.sauces > 0) form.sauces--" class="bg-[#3D2B1F] text-[#F7E4B2] w-8 h-8 rounded-md font-header">-</button>
-                            <span x-text="form.sauces" class="w-4 text-center font-bold"></span>
-                            <button @click="form.sauces++" class="bg-[#3D2B1F] text-[#F7E4B2] w-8 h-8 rounded-md font-header">+</button>
-                        </div>
-                    </div>
-
-                    <template x-if="sauceFee > 0">
-                        <div class="flex justify-between text-[#C78D2B]">
-                            <span>Cobro Extra Salsas</span>
-                            <span x-text="formatPrice(sauceFee)"></span>
-                        </div>
-                    </template>
-                    
-                    <div class="flex justify-between font-header text-3xl pt-4 mt-4 border-t-2 border-[#3D2B1F]">
-                        <span>TOTAL</span>
-                        <span x-text="formatPrice(total)"></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Formulario -->
-            <div class="bg-[#3D2B1F] text-[#F7E4B2] rounded-2xl p-6 border-4 border-[#3D2B1F]">
-                <h3 class="font-header text-3xl mb-6 text-[#C78D2B]">DATOS</h3>
-                <form @submit.prevent="submitOrder" class="space-y-5">
-                    
-                    <div>
-                        <label class="block text-sm font-bold mb-2 uppercase tracking-wide">Tu Nombre</label>
-                        <input type="text" x-model="form.name" required
-                               class="w-full bg-[#F7E4B2] text-[#3D2B1F] font-bold px-4 py-3 rounded-xl outline-none focus:ring-4 focus:ring-[#C78D2B] transition-shadow border-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold mb-2 uppercase tracking-wide">Celular</label>
-                        <input type="tel" pattern="[0-9]{10}" placeholder="10 dígitos" x-model="form.phone" required
-                               class="w-full bg-[#F7E4B2] text-[#3D2B1F] font-bold px-4 py-3 rounded-xl outline-none focus:ring-4 focus:ring-[#C78D2B] transition-shadow border-none placeholder:opacity-50">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold mb-2 uppercase tracking-wide">¿Dónde comes?</label>
-                        <select x-model="form.location" required
-                                class="w-full bg-[#F7E4B2] text-[#3D2B1F] font-bold px-4 py-3 rounded-xl outline-none focus:ring-4 focus:ring-[#C78D2B] transition-shadow border-none appearance-none">
-                            <option value="local">Consumo en local</option>
-                            <option value="llevar">Para llevar (+$2.000)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-bold mb-2 uppercase tracking-wide">Método de Pago</label>
-                        <select x-model="form.payment" required
-                                class="w-full bg-[#F7E4B2] text-[#3D2B1F] font-bold px-4 py-3 rounded-xl outline-none focus:ring-4 focus:ring-[#C78D2B] transition-shadow border-none appearance-none">
-                            <option value="efectivo">Efectivo</option>
-                            <option value="tarjeta">Tarjeta de Crédito / Débito</option>
-                            <option value="transferencia">Transferencia Bancaria</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" 
-                            class="w-full bg-[#C78D2B] text-[#3D2B1F] font-header text-2xl py-4 rounded-xl mt-6 active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
-                            :disabled="cart.length === 0">
-                        PROCESAR
-                    </button>
-                </form>
-            </div>
-        </div>
-    </section>
-
-    <!-- MODAL CHEF IA -->
-    <div x-show="aiModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#3D2B1F]/90 backdrop-blur-sm" x-transition>
-        <div class="bg-[#F7E4B2] border-4 border-[#3D2B1F] rounded-2xl p-6 w-full max-w-lg shadow-2xl relative" @click.outside="!isGenerating ? aiModalOpen = false : null">
-            <button @click="aiModalOpen = false" :disabled="isGenerating" class="absolute top-4 right-4 text-[#3D2B1F] font-bold text-3xl hover:scale-110 transition-transform disabled:opacity-50">&times;</button>
-            <h3 class="font-header text-3xl text-[#C78D2B] mb-2">✨ EL CHEF IA</h3>
-            <p class="font-body font-bold text-[#3D2B1F] mb-4 opacity-80 text-sm">Dile al Chef de Gemini qué se te antoja. Él inventará una hamburguesa única, le pondrá precio y la añadirá al menú.</p>
-            
-            <textarea x-model="aiPrompt" rows="3" placeholder="Ej: Quiero algo que mezcle dulce y salado, con doble carne, aros de cebolla y BBQ..." :disabled="isGenerating"
-                      class="w-full bg-white text-[#3D2B1F] font-bold px-4 py-3 rounded-xl outline-none focus:ring-4 focus:ring-[#C78D2B] transition-shadow border-4 border-[#3D2B1F] mb-4 resize-none"></textarea>
-            
-            <template x-if="aiError">
-                <p class="text-red-600 font-bold mb-4 text-sm bg-red-100 p-2 rounded-lg" x-text="aiError"></p>
-            </template>
-
-            <button @click="generateCustomBurger" :disabled="isGenerating || !aiPrompt.trim()"
-                    class="w-full bg-[#3D2B1F] text-[#F7E4B2] font-header text-xl py-4 rounded-xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 flex justify-center items-center gap-2">
-                <span x-show="!isGenerating">🍔 CREAR RECETA MÁGICA ✨</span>
-                <span x-show="isGenerating" class="animate-pulse">👨‍🍳 INVENTANDO...</span>
-            </button>
-        </div>
+    <div x-show="cargando" class="flex justify-center items-center py-20">
+      <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
     </div>
 
-    <!-- ESTADO DE DATOS (Alpine.js) -->
-    <script>
-        const apiKey = ""; // API Key proveída por el entorno
+    <main id="catalogo-grid" class="p-4 max-w-5xl mx-auto mt-6" x-show="!cargando">
+      <template x-for="(cat, index) in categoriasUnicas" :key="index">
+        <div class="mb-8">
+          <h2 class="text-2xl font-display mb-4 border-b-2 border-oscuro pb-2 uppercase" x-text="cat"></h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="prod in productos.filter(p => p.categoria === cat)" :key="prod.nombre">
+              <div class="bg-white rounded-xl shadow-sm border border-[#e5d4a5] p-4 flex flex-col justify-between hover:shadow-md transition">
+                <div>
+                  <h3 class="text-lg font-display text-oscuro mb-1" x-text="prod.nombre"></h3>
+                  <p class="text-acento font-bold text-xl mb-3">$<span x-text="prod.precio.toLocaleString()"></span></p>
+                </div>
+                <button @click="agregar(prod)" class="w-full bg-oscuro text-white py-2 rounded-md font-bold hover:bg-gray-800 transition">AGREGAR</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </main>
+  </div>
 
-        async function fetchWithRetry(url, options, retries = 5) {
-            const delays = [1000, 2000, 4000, 8000, 16000];
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    return await response.json();
-                } catch (e) {
-                    if (i === retries - 1) throw e;
-                    await new Promise(res => setTimeout(res, delays[i]));
-                }
+  <div x-show="vista === 'checkout'" x-transition.opacity class="p-4 max-w-2xl mx-auto pt-8">
+    <button @click="vista = 'catalogo'" class="text-oscuro font-bold mb-4 flex items-center gap-2 hover:text-acento transition">
+      <span>⬅️</span> Volver al Menú
+    </button>
+    
+    <h2 class="text-3xl font-display mb-6">TU ORDEN</h2>
+
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <template x-if="carrito.length === 0">
+        <p class="text-center text-gray-500 py-4 font-bold">El carrito está vacío.</p>
+      </template>
+      <ul class="divide-y divide-gray-200">
+        <template x-for="(item, index) in carrito" :key="index">
+          <li class="py-3 flex justify-between items-center">
+            <div class="flex-1">
+              <p class="font-bold text-oscuro" x-text="item.nombre"></p>
+              <p class="text-sm text-gray-500">$<span x-text="item.precio.toLocaleString()"></span> c/u</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button @click="modificarCant(index, -1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">-</button>
+              <span class="font-bold w-4 text-center" x-text="item.cant"></span>
+              <button @click="modificarCant(index, 1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">+</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6 space-y-4">
+      <h3 class="font-display text-xl mb-2">DATOS DE ENTREGA</h3>
+      
+      <div>
+        <label class="block text-sm font-bold mb-1">Tu Nombre *</label>
+        <input type="text" x-model="cliente.nombre" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento focus:ring-1 focus:ring-acento" placeholder="Ej: Nicolás">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-bold mb-1">Celular *</label>
+        <input type="tel" x-model="cliente.celular" maxlength="10" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento focus:ring-1 focus:ring-acento" placeholder="3000000000">
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-bold mb-1">¿Dónde comes?</label>
+          <select x-model="cliente.tipo_pedido" class="w-full border border-gray-300 p-3 rounded-md bg-white">
+            <option value="LOCAL">📍 En el local</option>
+            <option value="PARA LLEVAR">🛍️ Para llevar</option>
+            <option value="DOMICILIO">🛵 Domicilio</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-bold mb-1">Pago</label>
+          <select x-model="cliente.metodo_pago" class="w-full border border-gray-300 p-3 rounded-md bg-white">
+            <option value="EFECTIVO">💵 Efectivo</option>
+            <option value="NEQUI">📱 Nequi</option>
+          </select>
+        </div>
+      </div>
+
+      <div x-show="cliente.tipo_pedido === 'DOMICILIO'" x-transition>
+        <label class="block text-sm font-bold mb-1">Dirección de entrega *</label>
+        <input type="text" x-model="cliente.direccion" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento" placeholder="Carrera X # Y - Z">
+      </div>
+
+      <div>
+        <label class="block text-sm font-bold mb-1">Notas (Opcional)</label>
+        <textarea x-model="cliente.notas" rows="2" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento" placeholder="Sin cebolla, timbre malo..."></textarea>
+      </div>
+    </div>
+
+    <div class="bg-oscuro text-base rounded-xl p-5 shadow-lg">
+      <div class="flex justify-between mb-2 text-sm">
+        <span>Subtotal (Comida)</span>
+        <span>$<span x-text="desglose.subtotal.toLocaleString()"></span></span>
+      </div>
+      <div class="flex justify-between mb-2 text-sm" x-show="desglose.empaque > 0">
+        <span>Costo Empaque (Desechables)</span>
+        <span>$<span x-text="desglose.empaque.toLocaleString()"></span></span>
+      </div>
+      <div class="flex justify-between mb-4 text-sm" x-show="desglose.salsas > 0">
+        <span>Salsas Extra (+2 Gratis)</span>
+        <span>$<span x-text="desglose.salsas.toLocaleString()"></span></span>
+      </div>
+      <div class="flex justify-between font-display text-2xl border-t border-[#624735] pt-4 mb-6 text-acento">
+        <span>TOTAL</span>
+        <span>$<span x-text="desglose.total.toLocaleString()"></span></span>
+      </div>
+      
+      <button @click="enviar" :disabled="enviando || carrito.length === 0" class="w-full bg-acento text-white font-display text-xl py-4 rounded-md shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex justify-center items-center gap-2">
+        <span x-show="!enviando">CONFIRMAR ORDEN 🚀</span>
+        <span x-show="enviando" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-6 w-6"></span>
+      </button>
+    </div>
+  </div>
+
+  <button @click="vista = 'checkout'" x-show="vista === 'catalogo' && carrito.length > 0" x-transition.scale.origin.bottom.right class="fixed bottom-6 right-6 bg-oscuro text-white px-6 py-4 rounded-full shadow-2xl font-bold font-display text-lg hover:scale-105 transition flex items-center gap-3 z-50 border-2 border-acento">
+    <span>🛒</span>
+    <span class="bg-danger px-2 py-0.5 rounded-full text-sm" x-text="carrito.reduce((acc, item) => acc + item.cant, 0)"></span>
+    <span>$<span x-text="desglose.total.toLocaleString()"></span></span>
+  </button>
+
+  <script>
+    function menuApp() {
+      return {
+        productos: [],
+        categoriasUnicas: [],
+        carrito: [],
+        cliente: {
+          nombre: '', celular: '', tipo_pedido: 'LOCAL', direccion: '', metodo_pago: 'EFECTIVO', notas: ''
+        },
+        cargando: true,
+        enviando: false,
+        vista: 'catalogo', 
+        
+        init() {
+          if (typeof google !== 'undefined') {
+            google.script.run.withSuccessHandler(res => {
+              this.procesarMenu(res);
+            }).obtenerMenuPOS();
+          } else {
+            // Mock Data
+            setTimeout(() => {
+              this.procesarMenu([
+                { nombre: 'BURGER PRIME', precio: 19000, categoria: 'PRINCIPAL' },
+                { nombre: 'CHEESEBURGER', precio: 15000, categoria: 'PRINCIPAL' },
+                { nombre: 'PAPAS FRITAS', precio: 5000, categoria: 'ADICION' },
+                { nombre: 'SALSA AJO', precio: 500, categoria: 'SALSA' },
+                { nombre: 'SALSA BBQ', precio: 500, categoria: 'SALSA' },
+                { nombre: 'COCA COLA', precio: 4000, categoria: 'BEBIDAS' }
+              ]);
+            }, 800);
+          }
+        },
+
+        procesarMenu(datos) {
+          this.productos = datos.filter(p => !['DOMICILIO', 'COSTO EMPAQUE'].includes(p.nombre.toUpperCase()));
+          let categorias = this.productos.map(p => p.categoria || 'OTROS');
+          this.categoriasUnicas = [...new Set(categorias)].sort((a,b) => {
+            if(a === 'PRINCIPAL') return -1;
+            if(b === 'PRINCIPAL') return 1;
+            return a.localeCompare(b);
+          });
+          this.cargando = false;
+        },
+
+        scrollMenu() {
+          document.getElementById('catalogo-grid').scrollIntoView({ behavior: 'smooth' });
+        },
+
+        agregar(prod) {
+          let item = this.carrito.find(i => i.nombre === prod.nombre);
+          if (item) item.cant++;
+          else this.carrito.push({ ...prod, cant: 1 });
+        },
+
+        modificarCant(index, delta) {
+          this.carrito[index].cant += delta;
+          if (this.carrito[index].cant <= 0) this.carrito.splice(index, 1);
+        },
+
+        get desglose() {
+          let subtotal = 0;
+          let salsasTotal = 0;
+          let contadorSalsas = 0;
+          let empaque = (this.cliente.tipo_pedido === 'DOMICILIO' || this.cliente.tipo_pedido === 'PARA LLEVAR') ? 2000 : 0;
+
+          this.carrito.forEach(item => {
+            if (item.categoria === 'SALSA') {
+              for (let i = 0; i < item.cant; i++) {
+                if (contadorSalsas >= 2) salsasTotal += item.precio;
+                contadorSalsas++;
+              }
+            } else {
+              subtotal += (item.precio * item.cant);
             }
+          });
+
+          return { 
+            subtotal: subtotal, 
+            empaque: empaque, 
+            salsas: salsasTotal, 
+            total: subtotal + empaque + salsasTotal 
+          };
+        },
+
+        enviar() {
+          this.cliente.nombre = this.cliente.nombre.trim();
+          this.cliente.celular = this.cliente.celular.trim();
+          this.cliente.direccion = this.cliente.direccion.trim();
+
+          if (!this.cliente.nombre || this.cliente.celular.length < 10) return alert("⚠️ Ingresa un nombre y un celular válido (10 dígitos).");
+          if (this.cliente.tipo_pedido === 'DOMICILIO' && !this.cliente.direccion) return alert("⚠️ La dirección es obligatoria para domicilios.");
+
+          this.enviando = true;
+          
+          let carritoEnvio = [];
+          let contSalsas = 0;
+
+          this.carrito.forEach(item => {
+              let totalFila = 0;
+              if (item.categoria === 'SALSA') {
+                  for (let i = 0; i < item.cant; i++) {
+                      if (contSalsas >= 2) totalFila += item.precio;
+                      contSalsas++;
+                  }
+              } else {
+                  totalFila = item.precio * item.cant;
+              }
+              carritoEnvio.push({
+                 nombre: item.nombre,
+                 cant: item.cant,
+                 precioTotalCalculado: totalFila
+              });
+          });
+
+          if (typeof google !== 'undefined') {
+            google.script.run
+              .withSuccessHandler(res => {
+                this.enviando = false;
+                alert("✅ ORDEN CONFIRMADA\nTu ID de seguimiento es: " + res.split('-').pop());
+                this.carrito = [];
+                this.cliente.notas = '';
+                this.vista = 'catalogo';
+                window.scrollTo(0,0);
+              })
+              .withFailureHandler(err => {
+                this.enviando = false;
+                alert("❌ Error procesando el pedido: " + (err.message || err));
+              })
+              .guardarPedidoPOS(this.cliente, JSON.stringify(carritoEnvio));
+          } else {
+            setTimeout(() => {
+              alert("Payload simulado (Modo Desarrollo):\n" + JSON.stringify(carritoEnvio, null, 2));
+              this.enviando = false;
+            }, 1000);
+          }
         }
-
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('burgerApp', () => ({
-                products: [
-                    { id: 1, name: 'BURGER PRIME', desc: 'Doble carne angus 150g, queso cheddar fundido, tocineta ahumada crujiente y cebolla caramelizada.', price: 19000 },
-                    { id: 2, name: 'CLASSIC SMASH', desc: 'Doble smash 90g, doble queso americano, pepinillos encurtidos y salsa secreta de la casa.', price: 15500 },
-                    { id: 3, name: 'CHICKEN CRUNCH', desc: 'Pechuga marinada y frita, ensalada coleslaw cítrica y mayonesa de ajo asado.', price: 16000 }
-                ],
-                cart: [],
-                config: {
-                    packagingFee: 2000,
-                    extraSauceFee: 500,
-                    freeSauces: 2
-                },
-                form: {
-                    name: '',
-                    phone: '',
-                    location: 'local',
-                    payment: 'efectivo',
-                    sauces: 2 
-                },
-                
-                // IA States
-                aiModalOpen: false,
-                aiPrompt: '',
-                isGenerating: false,
-                aiError: '',
-                
-                addToCart(product) {
-                    this.cart.push(product);
-                },
-                
-                removeFromCart(index) {
-                    this.cart.splice(index, 1);
-                },
-                
-                formatPrice(value) {
-                    return new Intl.NumberFormat('es-CO', { 
-                        style: 'currency', 
-                        currency: 'COP', 
-                        minimumFractionDigits: 0 
-                    }).format(value);
-                },
-                
-                get subtotal() {
-                    return this.cart.reduce((sum, item) => sum + item.price, 0);
-                },
-                
-                get sauceFee() {
-                    if (this.form.sauces > this.config.freeSauces) {
-                        return (this.form.sauces - this.config.freeSauces) * this.config.extraSauceFee;
-                    }
-                    return 0;
-                },
-                
-                get total() {
-                    let totalCalc = this.subtotal;
-                    if (this.form.location === 'llevar') {
-                        totalCalc += this.config.packagingFee;
-                    }
-                    totalCalc += this.sauceFee;
-                    return totalCalc;
-                },
-                
-                submitOrder() {
-                    if (this.cart.length === 0) return;
-                    
-                    const payload = {
-                        timestamp: new Date().toISOString(),
-                        cliente: this.form.name,
-                        contacto: this.form.phone,
-                        modalidad: this.form.location,
-                        pago: this.form.payment,
-                        items: this.cart.map(i => i.name),
-                        salsas_solicitadas: this.form.sauces,
-                        desglose: {
-                            subtotal: this.subtotal,
-                            empaque: this.form.location === 'llevar' ? this.config.packagingFee : 0,
-                            recargo_salsas: this.sauceFee,
-                            total_final: this.total
-                        }
-                    };
-                    
-                    alert("KERNEL LOG - PAYLOAD:\n\n" + JSON.stringify(payload, null, 2));
-                },
-
-                async generateCustomBurger() {
-                    if (!this.aiPrompt.trim()) return;
-                    
-                    this.isGenerating = true;
-                    this.aiError = '';
-
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-                    const payload = {
-                        contents: [{ parts: [{ text: `Crea una hamburguesa que satisfaga este antojo: "${this.aiPrompt}"` }] }],
-                        systemInstruction: { 
-                            parts: [{ 
-                                text: "Eres el Chef IA Maestro de 'Hunger Burgers'. Tu tarea es crear una nueva hamburguesa basándote en los antojos del usuario. Responde estrictamente con un JSON válido que contenga: 'name' (nombre creativo de la hamburguesa, mayúsculas, max 3 palabras, puede incluir ✨), 'desc' (descripción apetitosa y poética que incluya los ingredientes solicitados, max 130 caracteres) y 'price' (un precio realista en pesos colombianos, número entero múltiplo de 500, entre 16000 y 28000). No incluyas markdown ni ningún otro texto fuera del JSON." 
-                            }] 
-                        },
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            responseSchema: {
-                                type: "OBJECT",
-                                properties: {
-                                    name: { type: "STRING" },
-                                    desc: { type: "STRING" },
-                                    price: { type: "INTEGER" }
-                                },
-                                required: ["name", "desc", "price"]
-                            }
-                        }
-                    };
-
-                    try {
-                        const data = await fetchWithRetry(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (textResponse) {
-                            const burger = JSON.parse(textResponse);
-                            burger.id = Date.now();
-                            
-                            // Añadimos el nuevo producto creado por IA al principio del arreglo
-                            this.products.unshift(burger);
-                            
-                            // Limpiamos y cerramos
-                            this.aiPrompt = '';
-                            this.aiModalOpen = false;
-                            
-                            // Bajamos automáticamente al menú para que vea su creación
-                            setTimeout(() => {
-                                document.getElementById('catalogo').scrollIntoView();
-                            }, 300);
-                        } else {
-                            throw new Error("El modelo no devolvió contenido.");
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        this.aiError = "La cocina de IA está experimentando alta demanda. ¡Intenta en un momento!";
-                    } finally {
-                        this.isGenerating = false;
-                    }
-                }
-            }))
-        })
-    </script>
+      }
+    }
+  </script>
 </body>
 </html>
