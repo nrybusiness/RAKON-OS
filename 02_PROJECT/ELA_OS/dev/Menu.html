@@ -1,154 +1,429 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hunger Burgers - Express</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { colors: { base: '#F7E4B2', oscuro: '#3D2B1F', acento: '#C78D2B', danger: '#dc3545' }, fontFamily: { sans: ['Quicksand', 'sans-serif'], display: ['Fredoka One', 'cursive'] } } } }
+  </script>
   <style>
-    body { background-color: #f0f2f5; margin: 0; padding: 15px; font-family: sans-serif; }
-    .header { text-align: center; margin-bottom: 20px; color: #333; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
-    
-    .grid-tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-    .ticket { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-top: 10px solid #ccc; display: flex; flex-direction: column;}
-    
-    .t-porpagar { border-top-color: #dc3545; background: #fff5f5; }
-    .t-pendiente { border-top-color: #ffc107; }
-    .t-cocina { border-top-color: #0dcaf0; }
-    .t-reparto { border-top-color: #6f42c1; } 
-    
-    .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-    .t-id { font-size: 22px; font-weight: 900; color: #333; }
-    .t-badge { font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 20px; background: #eee; }
-    
-    .t-cliente { font-size: 20px; font-weight: bold; color: #000; margin-bottom: 10px;}
-    
-    .btn-action { text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-right: 5px; margin-bottom: 10px;}
-    .btn-wa { background: #25D366; color: white; }
-    .btn-call { background: #0d6efd; color: white; }
-    .btn-map { background: #ea4335; color: white; } 
-    
-    .t-direccion { background: #e9ecef; padding: 10px; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 10px; border-left: 5px solid #6c757d; }
-    
-    .item-list { margin: 10px 0; padding: 0; list-style: none; border-top: 1px dashed #ccc; padding-top: 10px; flex-grow: 1;}
-    .item-list li { font-size: 16px; font-weight: 600; padding: 3px 0; color: #222; }
-    
-    .t-pago { display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; background: #fff3cd; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;}
-    .t-metodo { background: #ffc107; padding: 3px 8px; border-radius: 4px; font-size: 14px; color: #000;}
-    
-    .btn-ticket { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; margin-top: auto;}
-    .btn-green { background: #198754; } .btn-red { background: #dc3545; }
-    .btn-ticket:disabled { background: #e9ecef !important; color: #adb5bd !important; cursor: not-allowed; border: 1px solid #ced4da;}
-    
-    #loader { position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; display: none; z-index: 100;}
-
-    /* Clases para la notificación de devueltas/cambio */
-    .nota-cambio { background: #d4edda; color: #155724; padding: 8px; margin-top: 8px; border-radius: 6px; border: 2px solid #28a745; font-weight: bold; text-align: center; font-size: 16px; animation: parpadeoCambio 1.5s infinite; }
-    @keyframes parpadeoCambio { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    body { background-color: #F7E4B2; color: #3D2B1F; font-family: 'Quicksand', sans-serif; -webkit-tap-highlight-color: transparent; }
+    h1, h2, h3, .font-display { font-family: 'Fredoka One', cursive; font-weight: normal; }
+    .loader { border-top-color: #C78D2B; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .scroll-hide::-webkit-scrollbar { display: none; }
+    .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    html { scroll-behavior: smooth; }
   </style>
 </head>
-<body>
+<body x-data="menuApp()" x-init="init()" class="antialiased pb-24 relative" :class="{'overflow-hidden': modalPersonalizar || modalBebida || modalConfirmacion || mostrarUpsell}">
 
-<div id="loader">Actualizando visor...</div>
-<div class="header"><h2>🛵 Visor de Domicilios</h2></div>
-<div id="pantalla-reparto" class="grid-tickets">Cargando pedidos...</div>
+  <div x-show="!tiendaAbierta" class="bg-danger text-white text-center py-2 px-4 text-sm font-bold tracking-widest sticky top-0 z-50 shadow-md">
+    ⚠️ RESTAURANTE CERRADO - ABRIMOS DE 5:00 PM A 1:00 AM ⚠️
+  </div>
+  <div x-show="tiendaAbierta && !cargando" class="bg-oscuro text-acento text-center py-1.5 px-4 text-xs font-bold tracking-widest sticky top-0 z-50 shadow-md border-b border-[#624735]">
+    ⏳ TIEMPO DE PREPARACIÓN ACTUAL: ~<span x-text="eta"></span> MINUTOS
+  </div>
 
-<script>
-  let procesando = false;
-  function lockUI(status) {
-    procesando = status;
-    document.getElementById('loader').style.display = status ? 'block' : 'none';
-    document.querySelectorAll('.btn-ticket').forEach(b => { if(!b.disabled || status) b.disabled = status; });
-  }
+  <div x-show="vista === 'catalogo'" x-transition.opacity>
+    <header class="bg-oscuro text-base py-12 px-4 text-center shadow-md relative overflow-hidden">
+      <div class="relative z-10">
+        <h1 class="text-4xl md:text-5xl tracking-wide mb-2 text-acento">HUNGER BURGERS</h1>
+        <p class="text-md md:text-lg font-semibold tracking-widest opacity-90 mb-6">¿LISTO PARA EL PRIMER MORDISCO?</p>
+        <div class="flex justify-center gap-4">
+          <button @click="vista = 'rastreo'; window.scrollTo(0,0);" class="bg-acento text-white px-6 py-2 rounded-md font-display tracking-wide shadow-lg hover:bg-yellow-600 transition border-2 border-acento">RASTREAR ORDEN</button>
+        </div>
+      </div>
+    </header>
 
-  function cargarRepartos() {
-    google.script.run.withSuccessHandler(res => {
-      const cont = document.getElementById('pantalla-reparto');
+    <div x-show="cargando" class="flex justify-center items-center py-20"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div></div>
+
+    <nav x-show="!cargando" class="sticky z-40 bg-base border-b-2 border-acento shadow-md py-3 px-4 flex gap-3 overflow-x-auto scroll-hide w-full" :class="tiendaAbierta ? 'top-[28px]' : 'top-9'">
+      <template x-for="cat in categoriasUnicas" :key="cat">
+        <button @click="scrollToCat(cat)" class="bg-oscuro text-white px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow hover:bg-acento transition" x-text="cat"></button>
+      </template>
+    </nav>
+
+    <main id="catalogo-grid" class="p-4 max-w-5xl mx-auto mt-4" x-show="!cargando">
+      <template x-for="(cat, index) in categoriasUnicas" :key="index">
+        <div class="mb-12 pt-4" :id="'cat-' + cat.replace(/\s+/g, '-').toUpperCase()">
+          <h2 class="text-3xl font-display mb-4 border-b-4 border-oscuro pb-2 uppercase" x-text="cat"></h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="prod in menuFiltrado(cat)" :key="prod.nombre">
+              <div class="bg-white rounded-xl shadow-sm border border-[#e5d4a5] flex flex-col justify-between hover:shadow-md transition overflow-hidden" :class="!tiendaAbierta ? 'opacity-70 grayscale-[30%]' : ''">
+                <div class="h-44 w-full bg-gray-200 bg-cover bg-center border-b border-[#e5d4a5]" :style="prod.imagen ? `background-image: url('${prod.imagen}')` : 'background-image: url(https://placehold.co/400x300/F7E4B2/3D2B1F?text=%F0%9F%8D%94)'"></div>
+                <div class="p-4 flex flex-col flex-grow">
+                  <h3 class="text-lg font-display text-oscuro mb-1 leading-tight" x-text="prod.nombre"></h3>
+                  <p class="text-acento font-bold text-xl mb-4 mt-auto">$<span x-text="prod.precio.toLocaleString()"></span></p>
+                  <button @click="procesarSeleccion(prod)" :disabled="!tiendaAbierta" class="w-full bg-oscuro text-white py-3 rounded-md font-bold hover:bg-gray-800 transition text-lg tracking-wide shadow-md disabled:opacity-50 disabled:cursor-not-allowed">AGREGAR</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </main>
+  </div>
+
+  <div x-show="modalPersonalizar" style="display: none;" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black bg-opacity-80 sm:p-4" x-transition.opacity @click.self="modalPersonalizar = false">
+    <div class="bg-base w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="p-5 border-b border-[#e5d4a5] flex justify-between items-center bg-oscuro text-base sm:rounded-t-2xl rounded-t-2xl">
+        <h2 class="text-xl font-display leading-tight">PERSONALIZAR<br><span class="text-acento text-lg" x-text="platoActivo?.nombre"></span></h2>
+        <button @click="modalPersonalizar = false" class="text-3xl font-bold text-acento hover:text-white transition">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto scroll-hide flex-grow bg-white">
+        <h3 class="font-bold text-oscuro mb-3 border-b-2 border-acento pb-1 uppercase">Extras y Adiciones</h3>
+        <ul class="space-y-3 mb-6">
+          <template x-for="adc in adicionesDisponibles" :key="adc.nombre">
+            <li class="flex justify-between items-center">
+              <div class="flex-1"><p class="font-bold text-sm text-oscuro" x-text="adc.nombre"></p><p class="text-xs text-acento font-bold">+$<span x-text="adc.precio.toLocaleString()"></span></p></div>
+              <div class="flex items-center gap-2"><button @click="ajustarSubItem(adc, -1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">-</button><span class="font-bold w-4 text-center text-sm" x-text="obtenerCantSubItem(adc)"></span><button @click="ajustarSubItem(adc, 1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">+</button></div>
+            </li>
+          </template>
+        </ul>
+        <h3 class="font-bold text-oscuro mb-3 border-b-2 border-acento pb-1 uppercase">Salsas</h3>
+        <p class="text-xs text-gray-500 mb-3 italic">2 Salsas gratis por pedido global. Extras a $500 c/u.</p>
+        <ul class="space-y-3">
+          <template x-for="sls in salsasDisponibles" :key="sls.nombre">
+            <li class="flex justify-between items-center">
+              <div class="flex-1"><p class="font-bold text-sm text-oscuro" x-text="sls.nombre"></p></div>
+              <div class="flex items-center gap-2"><button @click="ajustarSubItem(sls, -1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">-</button><span class="font-bold w-4 text-center text-sm" x-text="obtenerCantSubItem(sls)"></span><button @click="ajustarSubItem(sls, 1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300">+</button></div>
+            </li>
+          </template>
+        </ul>
+      </div>
+      <div class="p-4 bg-gray-100 border-t border-[#e5d4a5] sm:rounded-b-2xl"><button @click="confirmarPlato" class="w-full bg-oscuro text-white py-4 rounded-lg font-bold font-display text-lg hover:bg-gray-800 transition shadow-md">AÑADIR AL CARRITO</button></div>
+    </div>
+  </div>
+
+  <div x-show="modalBebida" style="display: none;" class="fixed inset-0 z-[105] flex items-center justify-center bg-black bg-opacity-75 p-4" x-transition @click.self="modalBebida = false">
+    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento relative">
+      <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2" x-text="bebidaActiva?.nombre"></h3>
+      <div x-show="bebidaRequiereBase && bebidaBase === ''" class="flex flex-col gap-3">
+        <p class="text-lg font-bold text-oscuro mb-2">¿En Agua o en Leche?</p>
+        <button @click="bebidaBase = 'En Agua'" class="w-full bg-acento text-white py-3 rounded-lg font-bold shadow-md hover:bg-yellow-600 transition">En Agua</button>
+        <button @click="bebidaBase = 'En Leche'" class="w-full bg-white text-oscuro border-2 border-acento py-3 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition">En Leche (+$1.000)</button>
+        <button @click="modalBebida = false" class="w-full text-gray-600 py-2 font-bold underline hover:text-oscuro mt-2">Cancelar</button>
+      </div>
+      <div x-show="!bebidaRequiereBase || bebidaBase !== ''" class="flex flex-col gap-3">
+        <p class="text-lg font-bold text-oscuro mb-2">¿Cómo prefieres de azúcar?</p>
+        <button @click="confirmarBebida('Con Azúcar')" class="w-full bg-acento text-white py-3 rounded-lg font-bold shadow-md hover:bg-yellow-600 transition">Con Azúcar</button>
+        <button @click="confirmarBebida('Sin Azúcar')" class="w-full bg-gray-300 text-oscuro py-3 rounded-lg font-bold shadow-md hover:bg-gray-400 transition">Sin Azúcar</button>
+        <button @click="confirmarBebida('')" class="w-full text-gray-600 py-2 font-bold underline hover:text-oscuro">Omitir este paso</button>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="vista === 'checkout'" x-transition.opacity class="p-4 max-w-2xl mx-auto pt-8">
+    <button @click="vista = 'catalogo'; window.scrollTo(0,0);" class="text-oscuro font-bold mb-4 flex items-center gap-2 hover:text-acento transition"><span>⬅️</span> Volver al Menú</button>
+    <h2 class="text-3xl font-display mb-6">TU ORDEN</h2>
+
+    <div class="bg-yellow-50 border border-yellow-300 text-yellow-900 p-4 rounded-xl text-sm mb-6 shadow-sm">
+      <h4 class="font-bold mb-2 flex items-center gap-2"><span>ℹ️</span> INFORMACIÓN IMPORTANTE</h4>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>Las <strong>2 primeras salsas</strong> son gratis. Las extras cuestan <strong>$500</strong> c/u.</li>
+        <li>Los empaques desechables suman <strong>$2.000</strong> a pedidos para llevar o domicilio.</li>
+        <li>El <strong>domicilio base es de $2.000</strong>, ajustable ($2.000 extra por cada km adicional).</li>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-[#e5d4a5]">
+      <template x-if="carrito.length === 0"><p class="text-center text-gray-500 py-4 font-bold">El carrito está vacío.</p></template>
+      <ul class="divide-y divide-gray-200">
+        <template x-for="(item, index) in carrito" :key="item.id">
+          <li class="py-4">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex-1"><p class="font-bold text-oscuro text-lg leading-tight" x-text="item.nombre"></p><p class="text-sm text-acento font-bold">$<span x-text="item.precio.toLocaleString()"></span> c/u</p></div>
+              <div class="flex items-center gap-3"><button @click="modificarCantCarrito(index, -1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300 transition">-</button><span class="font-bold w-4 text-center" x-text="item.cant"></span><button @click="modificarCantCarrito(index, 1)" class="bg-gray-200 text-oscuro w-8 h-8 rounded-full font-bold hover:bg-gray-300 transition">+</button></div>
+            </div>
+            <template x-if="item.subItems && item.subItems.length > 0">
+              <ul class="pl-4 mt-2 border-l-2 border-gray-200 space-y-1">
+                <template x-for="(sub, sIndex) in item.subItems" :key="sIndex">
+                  <li class="flex justify-between text-sm"><span class="text-gray-600 font-semibold">+ <span x-text="sub.nombre"></span> <span x-show="sub.cant > 1">(x<span x-text="sub.cant"></span>)</span></span><span class="text-gray-400" x-show="sub.precio > 0">+$<span x-text="(sub.precio * sub.cant).toLocaleString()"></span></span></li>
+                </template>
+              </ul>
+            </template>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6 space-y-4 border border-[#e5d4a5]">
+      <h3 class="font-display text-xl mb-2">DATOS DE ENTREGA</h3>
+      <div><label class="block text-sm font-bold mb-1">Tu Nombre *</label><input type="text" x-model="cliente.nombre" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></div>
+      <div><label class="block text-sm font-bold mb-1">Celular *</label><input type="tel" x-model="cliente.celular" maxlength="10" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></div>
       
-      cont.innerHTML = res.map(p => {
-        let claseBorde = '';
-        let badge = '';
-        let botonHTML = '';
-
-        if (p.est === "POR PAGAR 💰") {
-          claseBorde = 't-porpagar'; badge = '🔴 Falta Pago';
-          botonHTML = `<button class="btn-ticket btn-red" onclick="confirmarPago('${p.id}')">💰 Confirmar Pago</button>`;
-        } else if (p.est === "PENDIENTE") {
-          claseBorde = 't-pendiente'; badge = '⏳ En Cola';
-          botonHTML = `<button class="btn-ticket" disabled>Esperando a Cocina...</button>`;
-        } else if (p.est === "EN COCINA 👨‍🍳") {
-          claseBorde = 't-cocina'; badge = '🍳 Preparando';
-          botonHTML = `<button class="btn-ticket" disabled>Cocinando...</button>`;
-        } else if (p.est === "EN REPARTO 🛵") {
-          claseBorde = 't-reparto'; badge = '🛵 LISTO PARA LLEVAR';
-          botonHTML = `<button class="btn-ticket btn-green" onclick="entregar('${p.id}')">✅ Confirmar Entrega</button>`;
-        }
-
-        let urlMapa = "https://maps.google.com/?q=" + encodeURIComponent(p.direccion);
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-bold mb-1">¿Dónde comes?</label>
+          <select x-model="cliente.tipo_pedido" class="w-full border border-gray-300 p-3 rounded-md bg-white">
+            <option value="LOCAL">📍 Local</option><option value="PARA LLEVAR">🛍️ Llevar</option><option value="DOMICILIO">🛵 Domicilio</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-bold mb-1">Pago</label>
+          <select x-model="cliente.metodo_pago" class="w-full border border-gray-300 p-3 rounded-md bg-white">
+            <option value="EFECTIVO">💵 Efectivo</option><option value="NEQUI">📱 Nequi</option>
+          </select>
+        </div>
         
-        // CORRECCIÓN: Unificar variables de teléfono por si el backend envía uno u otro.
-        let telefonoCliente = p.celular || p.telefono;
+        <div x-show="cliente.metodo_pago === 'NEQUI'" class="col-span-2 bg-[#f4e8ff] border border-[#d8b4fe] text-[#4c1d95] p-3 rounded-md text-sm shadow-sm">
+          ⚠️ <strong>Importante:</strong> Envía tu comprobante a WhatsApp <strong><a href="https://wa.me/573242807989" target="_blank" class="underline font-bold">324 280 7989</a></strong>.
+        </div>
+      </div>
 
-        // LÓGICA PARA RESALTAR EL CAMBIO/VUELTAS
-        let notasDesplegadas = '';
-        if (p.notas) {
-           if (p.notas.includes('[💵 LLEVAR CAMBIO')) {
-              let parts = p.notas.split('\n');
-              let cambioStr = parts.find(s => s.includes('[💵'));
-              let otras = parts.filter(s => !s.includes('[💵')).join(' ');
-              notasDesplegadas = `<div class="nota-cambio">${cambioStr}</div>`;
-              if(otras && otras.trim() !== '') notasDesplegadas += `<div style="font-weight:normal; font-size:14px; margin-top:5px; color:#dc3545;">📝 ${otras}</div>`;
-           } else {
-              notasDesplegadas = `<div style="font-weight:normal; font-size:14px; margin-top:5px;">📝 ${p.notas}</div>`;
-           }
-        }
+      <div x-show="cliente.tipo_pedido === 'DOMICILIO'" x-transition class="space-y-4 border-t border-gray-200 pt-4 mt-2">
+        <div><label class="block text-sm font-bold mb-1">Dirección exacta *</label><input type="text" x-model="cliente.direccion" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></div>
+        <div>
+          <label class="block text-sm font-bold mb-1">Tarifa (Distancia) *</label>
+          <select x-model="cliente.distancia_km" class="w-full border border-gray-300 p-3 rounded-md bg-white focus:outline-none focus:border-acento">
+            <option value="0">Menos de 1 km (Base $2.000)</option><option value="1">1 a 2 km ($4.000)</option><option value="2">2 a 3 km ($6.000)</option><option value="3">3 a 4 km ($8.000)</option><option value="4">4 a 5 km ($10.000)</option>
+          </select>
+        </div>
+        <div x-show="cliente.metodo_pago === 'EFECTIVO'" class="bg-green-50 border border-green-200 p-3 rounded-lg">
+          <label class="block text-sm font-bold text-green-900 mb-1">💵 ¿Con qué billete pagas?</label>
+          <input type="number" x-model="cliente.paga_con" placeholder="Ej: 50000" class="w-full border border-green-300 p-3 rounded-md focus:outline-none focus:border-green-600">
+          <p x-show="cliente.paga_con > desglose.total" class="text-sm font-bold text-green-700 mt-2">Te llevaremos de cambio: $<span x-text="(cliente.paga_con - desglose.total).toLocaleString()"></span></p>
+        </div>
+      </div>
 
-        return `
-        <div class="ticket ${claseBorde}">
-          <div class="t-header">
-            <span class="t-id">#${String(p.id).split('-').slice(-2)[0]}</span>
-            <span class="t-badge">${badge}</span>
-          </div>
+      <div><label class="block text-sm font-bold mb-1">Notas a cocina</label><textarea x-model="cliente.notas" rows="2" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></textarea></div>
+    </div>
+
+    <div class="bg-oscuro text-base rounded-xl p-5 shadow-lg">
+      <div class="flex justify-between mb-2 text-sm"><span>Subtotal (Comida)</span><span>$<span x-text="desglose.subtotal.toLocaleString()"></span></span></div>
+      <div class="flex justify-between mb-2 text-sm" x-show="desglose.empaque > 0"><span>Empaque Desechables</span><span>$<span x-text="desglose.empaque.toLocaleString()"></span></span></div>
+      <div class="flex justify-between mb-2 text-sm" x-show="desglose.salsas > 0"><span>Salsas Extra</span><span>$<span x-text="desglose.salsas.toLocaleString()"></span></span></div>
+      <div class="flex justify-between mb-4 text-sm" x-show="desglose.domicilio > 0"><span>Valor Domicilio</span><span>$<span x-text="desglose.domicilio.toLocaleString()"></span></span></div>
+      <div class="flex justify-between font-display text-2xl border-t border-[#624735] pt-4 mb-6 text-acento"><span>TOTAL</span><span>$<span x-text="desglose.total.toLocaleString()"></span></span></div>
+      <button @click="enviar" :disabled="enviando || carrito.length === 0 || !tiendaAbierta" class="w-full bg-acento text-white font-display text-xl py-4 rounded-md shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex justify-center gap-2">
+        <span x-show="!enviando">CONFIRMAR ORDEN 🚀</span><span x-show="enviando" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-6 w-6"></span>
+      </button>
+    </div>
+  </div>
+
+  <div x-show="vista === 'rastreo'" class="p-4 max-w-xl mx-auto pt-12 text-center" style="display:none;">
+    <button @click="detenerRastreo()" class="text-oscuro font-bold mb-8 flex items-center gap-2 hover:text-acento transition mx-auto"><span>⬅️</span> Volver al Menú</button>
+    <h2 class="text-3xl font-display mb-6">RASTREAR ORDEN</h2>
+    <input type="text" x-model="turnoRastreo" placeholder="Ej: 1234" class="w-full text-center border-2 border-oscuro p-4 rounded-xl text-xl mb-4 shadow-sm focus:outline-none focus:border-acento">
+    <button @click="buscarOrden" class="bg-oscuro text-white px-8 py-4 rounded-md font-bold font-display tracking-widest text-lg w-full mb-6">BUSCAR</button>
+    
+    <div x-show="estadoOrden" class="bg-white p-6 rounded-xl shadow-md border-t-4 border-acento text-left mt-4" x-transition>
+      <div class="flex justify-between items-center mb-2">
+        <p class="text-sm text-gray-500">Cliente: <span class="font-bold text-oscuro" x-text="estadoOrden?.cliente"></span></p>
+        <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+      </div>
+      <p class="text-2xl font-display text-oscuro mb-2" x-text="estadoOrden?.estado"></p>
+      <p class="text-sm font-bold">Total a pagar: $<span x-text="estadoOrden?.total?.toLocaleString() || 0"></span></p>
+      <p class="text-sm text-gray-500 uppercase mt-1" x-text="estadoOrden?.tipo"></p>
+    </div>
+    <div x-show="errorRastreo" class="bg-red-100 text-red-700 p-4 rounded-xl font-bold mt-4">Orden no encontrada. Revisa tu turno.</div>
+  </div>
+
+  <div x-show="modalConfirmacion" style="display: none;" class="fixed inset-0 z-[120] flex items-center justify-center bg-black bg-opacity-80 p-4">
+    <div class="bg-base rounded-2xl max-w-md w-full p-8 text-center shadow-2xl border-4 border-oscuro relative">
+      <h2 class="text-3xl font-display text-oscuro mb-2">¡ORDEN RECIBIDA!</h2>
+      <p class="text-lg font-bold text-oscuro mb-4">Tu número de turno es:</p>
+      <div class="text-6xl font-display text-acento mb-6 bg-white py-4 rounded-xl border-2 border-oscuro shadow-inner" x-text="ticketConfirmado"></div>
+      <p class="text-lg font-bold text-oscuro mb-1">Total a pagar:</p>
+      <div class="text-4xl font-display text-danger mb-8">$<span x-text="totalConfirmado.toLocaleString()"></span></div>
+      <div class="flex flex-col gap-3">
+        <button @click="irARastreo" class="bg-acento text-white w-full py-4 rounded-lg font-bold font-display text-xl shadow-lg">📍 RASTREAR MI PEDIDO</button>
+        <button @click="cerrarModal" class="bg-oscuro text-white w-full py-3 rounded-lg font-bold">VOLVER AL MENÚ</button>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="mostrarUpsell" style="display: none;" class="fixed inset-0 z-[115] flex items-center justify-center bg-black bg-opacity-75 p-4" @click.self="mostrarUpsell = false">
+    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento">
+      <h3 class="text-2xl font-display text-oscuro mb-2">¡Espera! 🍟</h3>
+      <p class="text-lg font-bold text-oscuro mb-6">¿Te gustaría añadir el combo de papas por solo <strong>$4.000</strong>?</p>
+      <div class="flex gap-4">
+        <button @click="mostrarUpsell = false" class="flex-1 bg-gray-300 text-oscuro py-3 rounded-lg font-bold hover:bg-gray-400">No, gracias</button>
+        <button @click="aceptarUpsell" class="flex-1 bg-acento text-white py-3 rounded-lg font-bold hover:bg-yellow-600 shadow-md">¡Sí, añadir!</button>
+      </div>
+    </div>
+  </div>
+
+  <button @click="vista = 'checkout'; window.scrollTo(0,0);" x-show="vista === 'catalogo' && carrito.length > 0 && !modalConfirmacion && !mostrarUpsell && !modalPersonalizar && !modalBebida" class="fixed bottom-6 right-6 bg-oscuro text-white px-6 py-4 rounded-full shadow-2xl font-bold font-display text-lg flex items-center gap-3 z-50 border-2 border-acento hover:scale-105 transition">
+    <span>🛒</span><span class="bg-danger px-2 py-0.5 rounded-full text-sm" x-text="totalItemsCarrito"></span>
+    <span>$<span x-text="desglose.total.toLocaleString()"></span></span>
+  </button>
+
+  <script>
+    function menuApp() {
+      return {
+        productos: [], adicionesDisponibles: [], salsasDisponibles: [], categoriasUnicas: [],
+        carrito: [],
+        cliente: { nombre: '', celular: '', tipo_pedido: 'LOCAL', direccion: '', metodo_pago: 'EFECTIVO', notas: '', distancia_km: "0", paga_con: "" },
+        
+        cargando: true, enviando: false, vista: 'catalogo', tiendaAbierta: true, estadoForzado: 'AUTO', eta: 15,
+        turnoRastreo: '', estadoOrden: null, errorRastreo: false, pollingInterval: null,
+        modalConfirmacion: false, ticketConfirmado: '', totalConfirmado: 0,
+        mostrarUpsell: false, modalPersonalizar: false, platoActivo: null, subItemsActivos: [], 
+        modalBebida: false, bebidaActiva: null, bebidaRequiereBase: false, bebidaBase: '',
+
+        init() {
+          let guardadoCart = localStorage.getItem('rakon_cart'); if (guardadoCart) this.carrito = JSON.parse(guardadoCart);
+          let guardadoClient = localStorage.getItem('rakon_cliente'); if (guardadoClient) this.cliente = JSON.parse(guardadoClient);
+          this.$watch('carrito', val => localStorage.setItem('rakon_cart', JSON.stringify(val)));
+          this.$watch('cliente', val => localStorage.setItem('rakon_cliente', JSON.stringify(val)));
+
+          if (typeof google !== 'undefined') {
+            google.script.run.withSuccessHandler(res => {
+              this.estadoForzado = res; this.tiendaAbierta = this.evaluarApertura();
+              google.script.run.withSuccessHandler(data => this.procesarMenu(data)).obtenerMenuPOS();
+              google.script.run.withSuccessHandler(pedidos => this.calcularETA(pedidos)).obtenerPedidosKDS();
+            }).obtenerEstadoLocal();
+          } else {
+            this.tiendaAbierta = true;
+            setTimeout(() => this.procesarMenu([{ nombre: 'BURGER PRIME', precio: 19000, categoria: 'HAMBURGUESAS' }, { nombre: 'JUGO DE FRESA', precio: 5000, categoria: 'BEBIDAS' }]), 800);
+          }
+        },
+
+        calcularETA(pedidos) {
+            if(!pedidos) return;
+            let activos = pedidos.filter(p => p.est === 'PENDIENTE' || p.est === 'EN COCINA 👨‍🍳').length;
+            let mins = 15 + (activos * 3);
+            this.eta = mins > 60 ? '+60' : mins;
+        },
+
+        evaluarApertura() {
+          if (this.estadoForzado === 'ABIERTO') return true;
+          if (this.estadoForzado === 'CERRADO') return false;
+          let d = new Date(); let utc = d.getTime() + (d.getTimezoneOffset() * 60000); let colTime = new Date(utc + (3600000 * -5));
+          let h = colTime.getHours(); return (h >= 17 || h < 1);
+        },
+
+        procesarMenu(datos) {
+          this.productos = datos.filter(p => !['DOMICILIO', 'COSTO EMPAQUE'].includes(p.nombre.toUpperCase()));
+          this.adicionesDisponibles = this.productos.filter(p => ['ADICIÓN', 'ADICION', 'EXTRA'].includes(p.categoria.toUpperCase()));
+          this.salsasDisponibles = this.productos.filter(p => p.categoria.toUpperCase() === 'SALSA');
+          let excludeCats = ['ADICIÓN', 'ADICION', 'EXTRA', 'SALSA'];
+          let cats = this.productos.map(p => p.categoria.toUpperCase() || 'OTROS').filter(c => !excludeCats.includes(c));
+          const ordenDeseado = ['HAMBURGUESAS', 'CARNES ASADAS', 'PAPAS Y PICADAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'BEBIDAS'];
+          this.categoriasUnicas = [...new Set(cats)].sort((a, b) => {
+            let idxA = ordenDeseado.indexOf(a); let idxB = ordenDeseado.indexOf(b);
+            if (idxA === -1) idxA = 999; if (idxB === -1) idxB = 999; return idxA - idxB;
+          });
+          this.cargando = false;
+        },
+
+        menuFiltrado(cat) { 
+          let filtrados = this.productos.filter(p => p.categoria.toUpperCase() === cat); 
+          if (cat === 'BEBIDAS') {
+             const ordenBebidas = ['JUGO DE MORA', 'JUGO DE MANGO', 'JUGO DE PIÑA', 'JUGO DE MARACUYA', 'JUGO DE FRESA', 'JUGO DE LULO', 'JUGO DE GUANABANA', 'DEL VALLE 400', 'COCACOLA 400', 'SPRITE 400', 'PREMIO 400', 'CUATRO 400', 'COCACOLA 1.5'];
+             filtrados.sort((a, b) => {
+               let idxA = ordenBebidas.indexOf(a.nombre.toUpperCase()); let idxB = ordenBebidas.indexOf(b.nombre.toUpperCase());
+               if (idxA === -1) idxA = 999; if (idxB === -1) idxB = 999; return idxA - idxB;
+             });
+          }
+          return filtrados;
+        },
+        
+        scrollToCat(cat) { 
+          const idStr = 'cat-' + cat.replace(/\s+/g, '-').toUpperCase(); const el = document.getElementById(idStr);
+          if (el) { const offset = 100; const bodyRect = document.body.getBoundingClientRect().top; window.scrollTo({ top: (el.getBoundingClientRect().top - bodyRect) - offset, behavior: 'smooth' }); }
+        },
+
+        get totalItemsCarrito() { return this.carrito.reduce((acc, i) => acc + i.cant, 0); },
+
+        procesarSeleccion(prod) {
+          const cat = prod.categoria.toUpperCase(); const nombre = prod.nombre.toUpperCase();
+          const esPlatoPrincipal = ['HAMBURGUESAS', 'CARNES ASADAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'PRINCIPAL'].includes(cat);
+          if (cat === 'BEBIDAS') {
+             if (nombre.includes('JUGO') || nombre.includes('LIMONADA')) { this.bebidaActiva = prod; this.bebidaBase = ''; this.bebidaRequiereBase = nombre.includes('JUGO'); this.modalBebida = true; } else { this.agregarDirecto(prod); }
+          } else if (esPlatoPrincipal) { this.platoActivo = { ...prod }; this.subItemsActivos = []; this.modalPersonalizar = true; } else { this.agregarDirecto(prod); }
+        },
+
+        confirmarBebida(azucar) {
+           let sub = [];
+           if (this.bebidaRequiereBase && this.bebidaBase) sub.push({ nombre: this.bebidaBase, cant: 1, precio: (this.bebidaBase === 'En Leche' ? 1000 : 0) });
+           if (azucar) sub.push({ nombre: azucar, cant: 1, precio: 0 });
+           this.carrito.push({ ...this.bebidaActiva, id: Date.now() + Math.random(), cant: 1, subItems: sub });
+           this.modalBebida = false; this.bebidaActiva = null;
+        },
+
+        obtenerCantSubItem(itemRef) { let found = this.subItemsActivos.find(i => i.nombre === itemRef.nombre); return found ? found.cant : 0; },
+        ajustarSubItem(itemRef, delta) {
+          let idx = this.subItemsActivos.findIndex(i => i.nombre === itemRef.nombre);
+          if (idx >= 0) { this.subItemsActivos[idx].cant += delta; if (this.subItemsActivos[idx].cant <= 0) this.subItemsActivos.splice(idx, 1); } else if (delta > 0) { this.subItemsActivos.push({ ...itemRef, cant: 1 }); }
+        },
+        confirmarPlato() { let plato = { ...this.platoActivo, id: Date.now() + Math.random(), cant: 1, subItems: JSON.parse(JSON.stringify(this.subItemsActivos)) }; this.carrito.push(plato); this.modalPersonalizar = false; this.verificarUpsell(plato.nombre); },
+        agregarDirecto(prod) {
+          let item = this.carrito.find(i => i.nombre === prod.nombre && (!i.subItems || i.subItems.length === 0));
+          if (item) item.cant++; else this.carrito.push({ ...prod, id: Date.now() + Math.random(), cant: 1, subItems: [] });
+          this.verificarUpsell(prod.nombre);
+        },
+        verificarUpsell(nombre) { const kw = ['BURGER', 'HAMBURGUESA', 'PERRO', 'PERRA', 'BURRITO', 'PATACON', 'PATACÓN', 'CARNE']; if (kw.some(k => nombre.toUpperCase().includes(k))) this.mostrarUpsell = true; },
+        aceptarUpsell() { let item = this.carrito.find(i => i.nombre === 'COMBO PAPAS'); if (item) item.cant++; else this.carrito.push({ nombre: 'COMBO PAPAS', precio: 4000, cant: 1, categoria: 'ADICION', id: Date.now(), subItems:[] }); this.mostrarUpsell = false; },
+        modificarCantCarrito(index, delta) { this.carrito[index].cant += delta; if (this.carrito[index].cant <= 0) this.carrito.splice(index, 1); },
+
+        get desglose() {
+          let sub = 0; let sls = 0; let cont = 0;
+          let emp = ['DOMICILIO', 'PARA LLEVAR'].includes(this.cliente.tipo_pedido) ? 2000 : 0;
+          let dom = this.cliente.tipo_pedido === 'DOMICILIO' ? (2000 + (parseInt(this.cliente.distancia_km || 0) * 2000)) : 0;
+          const procesarPrecio = (item, baseCant) => {
+            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
+              for (let i = 0; i < (item.cant * baseCant); i++) { if (cont >= 2) sls += item.precio; cont++; }
+            } else { sub += (item.precio * item.cant * baseCant); }
+          };
+          this.carrito.forEach(item => { procesarPrecio(item, 1); if (item.subItems) item.subItems.forEach(s => procesarPrecio(s, item.cant)); });
+          return { subtotal: sub, empaque: emp, salsas: sls, domicilio: dom, total: sub + emp + sls + dom };
+        },
+
+        enviar() {
+          if (!this.tiendaAbierta) return alert("El restaurante se encuentra cerrado.");
+          if (!this.cliente.nombre || this.cliente.celular.length < 10) return alert("⚠️ Nombre y celular válidos (10) requeridos.");
+          if (this.cliente.tipo_pedido === 'DOMICILIO' && !this.cliente.direccion) return alert("⚠️ Dirección requerida.");
           
-          <div class="t-cliente">👤 ${p.cliente}</div>
-          
-          <div>
-            ${telefonoCliente ? `
-              <a href="https://wa.me/57${telefonoCliente}" target="_blank" class="btn-action btn-wa">💬 WhatsApp</a> 
-              <a href="tel:${telefonoCliente}" class="btn-action btn-call">📞 Llamar</a>
-            ` : '<span style="color:red; font-size:12px; font-weight:bold; display:inline-block; margin-bottom:10px;">❌ Sin teléfono registrado</span><br>'}
-            
-            <a href="${urlMapa}" target="_blank" class="btn-action btn-map">🗺️ Mapa</a>
-          </div>
+          this.enviando = true; let tReserva = this.desglose.total; let payload = []; let contS = 0;
+          let tipoCopia = this.cliente.tipo_pedido;
+          let notasEnvio = this.cliente.notas || '';
 
-          <div class="t-direccion">
-            📍 ${p.direccion}
-            ${notasDesplegadas}
-          </div>
-          
-          <ul class="item-list">${p.items.map(i => `<li>• ${i}</li>`).join('')}</ul>
+          if (tipoCopia === 'LOCAL') tipoCopia = 'LOCAL ⚡';
+          if (this.cliente.metodo_pago === 'EFECTIVO' && this.cliente.tipo_pedido === 'DOMICILIO' && this.cliente.paga_con > tReserva) {
+             notasEnvio = `[💵 LLEVAR CAMBIO DE: $${(this.cliente.paga_con - tReserva).toLocaleString()}]\n` + notasEnvio;
+          }
 
-          <div class="t-pago">
-            <div>Cobrar: <span style="color:#dc3545;">$${p.total.toLocaleString()}</span></div>
-            <div class="t-metodo">${p.metodo_pago.toUpperCase()}</div>
-          </div>
+          const aplanar = (item, multi) => {
+            let t = 0;
+            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
+              for (let i=0; i < (item.cant * multi); i++) { if (contS >= 2) t += item.precio; contS++; }
+            } else { t = item.precio * (item.cant * multi); }
+            payload.push({ nombre: item.nombre, cant: (item.cant * multi), precioTotalCalculado: t });
+          };
 
-          ${botonHTML}
-        </div>`;
-      }).join('') || '<h3 style="text-align:center; color:#6c757d; grid-column: 1 / -1;">No hay domicilios activos ✅</h3>';
-      
-      if (!procesando) setTimeout(cargarRepartos, 5000); 
-    }).obtenerPedidosReparto();
-  }
+          this.carrito.forEach(item => { aplanar(item, 1); if (item.subItems) item.subItems.forEach(s => aplanar(s, item.cant)); });
+          if (this.cliente.tipo_pedido === 'DOMICILIO') payload.push({ nombre: 'DOMICILIO', cant: 1, precioTotalCalculado: this.desglose.domicilio });
 
-  function entregar(id) {
-    lockUI(true);
-    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).finalizarReparto(id);
-  }
-  
-  function confirmarPago(id) {
-    lockUI(true);
-    google.script.run.withSuccessHandler(() => { lockUI(false); cargarRepartos(); }).ejecutarConfirmacionPagoRemoto(String(id).split('-').slice(-2)[0]);
-  }
+          let payloadFinal = { nombre: this.cliente.nombre, celular: this.cliente.celular, tipo_pedido: tipoCopia, metodo_pago: this.cliente.metodo_pago, direccion: this.cliente.direccion, notas: notasEnvio };
 
-  cargarRepartos();
-</script>
+          if (typeof google !== 'undefined') {
+            google.script.run.withSuccessHandler(res => {
+              this.enviando = false; let pt = res.split('-'); this.ticketConfirmado = pt.length > 2 ? pt[pt.length - 2] : pt.pop();
+              this.totalConfirmado = tReserva; this.modalConfirmacion = true; this.carrito = []; this.cliente.notas = ''; this.cliente.paga_con = ''; localStorage.removeItem('rakon_cart');
+            }).withFailureHandler(err => { this.enviando = false; alert("❌ Error: " + err.message); }).guardarPedidoPOS(payloadFinal, JSON.stringify(payload));
+          } else {
+            setTimeout(() => { this.enviando = false; this.ticketConfirmado = "9999"; this.totalConfirmado = tReserva; this.modalConfirmacion = true; this.carrito = []; this.cliente.notas=''; this.cliente.paga_con = ''; localStorage.removeItem('rakon_cart'); }, 1000);
+          }
+        },
+
+        cerrarModal() { this.modalConfirmacion = false; this.vista = 'catalogo'; window.scrollTo(0,0); },
+        irARastreo() { this.modalConfirmacion = false; this.turnoRastreo = this.ticketConfirmado; this.vista = 'rastreo'; this.buscarOrden(); window.scrollTo(0,0); },
+        buscarOrden() {
+          if(!this.turnoRastreo.trim()) return; this.errorRastreo = false; this.estadoOrden = null;
+          let f = () => { typeof google!=='undefined' ? google.script.run.withSuccessHandler(r => { r.encontrado ? (this.estadoOrden=r, this.errorRastreo=false) : (!this.estadoOrden&&(this.errorRastreo=true)); }).buscarEstadoPedido(this.turnoRastreo.trim()) : this.errorRastreo=true; };
+          f(); if(this.pollingInterval) clearInterval(this.pollingInterval); this.pollingInterval = setInterval(f, 5000);
+        },
+        detenerRastreo() { if(this.pollingInterval) clearInterval(this.pollingInterval); this.estadoOrden = null; this.turnoRastreo = ''; this.errorRastreo = false; this.vista = 'catalogo'; }
+      }
+    }
+  </script>
 </body>
 </html>
