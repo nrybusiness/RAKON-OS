@@ -59,7 +59,7 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <template x-for="prod in menuFiltrado(cat)" :key="prod.nombre">
               <div class="bg-white rounded-xl shadow-sm border border-[#e5d4a5] flex flex-col justify-between hover:shadow-md transition overflow-hidden" :class="!tiendaAbierta ? 'opacity-70 grayscale-[30%]' : ''">
-                <div class="h-44 w-full bg-gray-200 bg-cover bg-center border-b border-[#e5d4a5]" :style="prod.imagen ? `background-image: url('${prod.imagen}')` : 'background-image: url(https://placehold.co/400x300/F7E4B2/3D2B1F?text=%F0%9F%8D%94)'"></div>
+                <div class="h-56 w-full bg-white bg-cover bg-center border-b border-[#e5d4a5]" :style="prod.imagen ? `background-image: url('${prod.imagen}')` : 'background-image: url(https://placehold.co/400x300/F7E4B2/3D2B1F?text=%F0%9F%8D%94)'"></div>
                 <div class="p-4 flex flex-col flex-grow">
                   <h3 class="text-lg font-display text-oscuro mb-1 leading-tight" x-text="prod.nombre"></h3>
                   <p class="text-xs text-gray-600 mb-3 leading-snug line-clamp-3" x-show="prod.descripcion" x-text="prod.descripcion"></p>
@@ -369,7 +369,7 @@
         menuFiltrado(cat) { 
           let filtrados = this.productos.filter(p => p.categoria.toUpperCase() === cat); 
           if (cat === 'BEBIDAS') {
-             const ordenBebidas = ['JUGO DE MORA', 'JUGO DE MANGO', 'JUGO DE PIÑA', 'JUGO DE MARACUYA', 'JUGO DE FRESA', 'JUGO DE LULO', 'JUGO DE GUANABANA', 'DEL VALLE 400', 'COCACOLA 400', 'SPRITE 400', 'PREMIO 400', 'CUATRO 400', 'COCACOLA 1.5'];
+             const ordenBebidas = ['LIMONADA','JUGO DE MORA', 'JUGO DE MANGO', 'JUGO DE PIÑA', 'JUGO DE MARACUYA', 'JUGO DE FRESA', 'JUGO DE LULO', 'JUGO DE GUANABANA', 'DEL VALLE 400', 'COCACOLA 400', 'SPRITE 400', 'PREMIO 400', 'CUATRO 400', 'COCACOLA 1.5'];
              filtrados.sort((a, b) => {
                let idxA = ordenBebidas.indexOf(a.nombre.toUpperCase()); let idxB = ordenBebidas.indexOf(b.nombre.toUpperCase());
                if (idxA === -1) idxA = 999; if (idxB === -1) idxB = 999; return idxA - idxB;
