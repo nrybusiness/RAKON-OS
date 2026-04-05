@@ -1,7 +1,7 @@
 /**
  * RAKON - LÓGICA DE NEGOCIO (Backend.gs)
  * Base de datos, inventario y ejecución de reglas comerciales.
- */
+*/
 
 const COSTO_EMPAQUE_FIJO = 2000;
 const VALOR_BASE_DOMICILIO = 2000;
@@ -49,7 +49,6 @@ function onEdit(e) {
   if (!e || !e.range) return;
   const sh = e.range.getSheet();
   const nombreHoja = sh.getName();
-  
   if (nombreHoja === "RECETAS") clearRecetasCache();
   
   if (nombreHoja.startsWith("INV_")) {
@@ -72,22 +71,19 @@ function sanitizarTexto(texto) {
 
 function calcularTarifa(direccionDestino) {
   if (!direccionDestino) return { costo: 0, km: 0, error: "Dirección requerida." };
-  
   try {
-    const destinoFull = direccionDestino + ", Bello, Antioquia"; 
+    const destinoFull = direccionDestino + ", Bello, Antioquia";
     const direcciones = Maps.newDirectionFinder()
       .setOrigin(ORIGEN_RESTAURANTE)
       .setDestination(destinoFull)
       .setMode(Maps.DirectionFinder.Mode.DRIVING)
       .getDirections();
-      
     if (direcciones.status !== 'OK' || !direcciones.routes[0]) {
       return { costo: VALOR_BASE_DOMICILIO, km: 0, error: "Ubicación ambigua. Tarifa base aplicada preventivamente." };
     }
     
     const leg = direcciones.routes[0].legs[0];
     const distanceKm = leg.distance.value / 1000;
-    
     if (distanceKm > RADIO_MAXIMO_KM) {
       return { costo: 0, km: distanceKm, error: `Fuera de zona. Máximo ${RADIO_MAXIMO_KM} km.` };
     }
@@ -108,7 +104,6 @@ function buscarEstadoPedido(turnoBuscado) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
   const d = shP.getDataRange().getValues();
-  
   let idOficial = "";
   let cliente = "Cliente";
   let estado = "PENDIENTE";
@@ -117,7 +112,6 @@ function buscarEstadoPedido(turnoBuscado) {
   let totalCalculado = 0;
   let encontrado = false;
   let items = [];
-  
   for (let i = d.length - 1; i >= 1; i--) { 
     let idCompleto = d[i][0] ? String(d[i][0]).trim() : "";
     if (idCompleto && (idCompleto.includes("-" + turnoBuscado + "-") || idCompleto.endsWith("-" + turnoBuscado) || idCompleto === turnoBuscado)) {
@@ -161,15 +155,23 @@ function obtenerMenuPOS() {
     let precio = Number(data[i][4]) || 0;
     let categoriaRaw = String(data[i][5] || "").trim().toUpperCase();
     let imgUrl = String(data[i][6] || "").trim();
+    let descripcionTexto = String(data[i][7] || "").trim(); // Lectura Columna H
 
     if (!prod) continue;
     if (categoriaRaw !== "" && !catMap[prod]) catMap[prod] = categoriaRaw;
-
+    
     if (precio > 0) {
         if (mapPOS[prod] === undefined || mapPOS[prod].precio === 0) {
-            mapPOS[prod] = { precio: precio, imagen: imgUrl };
+            mapPOS[prod] = { 
+              precio: precio, 
+              imagen: imgUrl,
+              descripcion: descripcionTexto
+            };
+        } else if (descripcionTexto !== "" && !mapPOS[prod].descripcion) {
+            mapPOS[prod].descripcion = descripcionTexto;
         }
     }
+    
     if (/\[LLEVAR\]/i.test(ing)) reqEmpaque[prod] = true;
   }
   
@@ -177,7 +179,15 @@ function obtenerMenuPOS() {
   for (let prod in mapPOS) {
     let catOficial = catMap[prod] || "PRINCIPAL"; 
     if (catOficial.includes("INGREDIENTE") || prod === "EMPAQUE LLEVAR" || prod === "COSTO EMPAQUE") continue;
-    catalogo.push({ nombre: prod, precio: mapPOS[prod].precio, imagen: mapPOS[prod].imagen, requiereEmpaque: !!reqEmpaque[prod], categoria: catOficial });
+    
+    catalogo.push({ 
+        nombre: prod, 
+        precio: mapPOS[prod].precio, 
+        imagen: mapPOS[prod].imagen, 
+        requiereEmpaque: !!reqEmpaque[prod], 
+        categoria: catOficial,
+        descripcion: mapPOS[prod].descripcion || ""
+    });
   }
   
   catalogo.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -188,19 +198,18 @@ function guardarPedidoPOS(clienteObj, carritoJSON) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
   let carrito = JSON.parse(carritoJSON);
-  
   let nombre = String(clienteObj.nombre || "Cliente POS").trim().toUpperCase();
   let celular = String(clienteObj.celular || "").trim();
   let direccion = String(clienteObj.direccion || "").trim();
   let notas = String(clienteObj.notas || "").trim();
   let tipo_pedido = String(clienteObj.tipo_pedido || "LOCAL").trim().toUpperCase();
   let metodo_pago = String(clienteObj.metodo_pago || "EFECTIVO").trim().toUpperCase();
-  
   let turnoTemp = Math.floor(1000 + Math.random() * 9000).toString();
   const timestampID = Date.now().toString(36).toUpperCase().slice(-6); 
   let idOficial = celular ? `${celular}-${turnoTemp}-${timestampID}` : `POS-${turnoTemp}-${timestampID}`;
   let fechaActual = new Date();
-  let estadoInicial = (metodo_pago === "NEQUI" || (["LOCAL", "LOCAL ⚡", "PARA LLEVAR"].includes(tipo_pedido) && metodo_pago === "EFECTIVO")) ? "POR PAGAR 💰" : "PENDIENTE";
+  let estadoInicial = (metodo_pago === "NEQUI" || (["LOCAL", "LOCAL ⚡", "PARA LLEVAR"].includes(tipo_pedido) && metodo_pago === "EFECTIVO")) ?
+  "POR PAGAR 💰" : "PENDIENTE";
   
   if (tipo_pedido === "DOMICILIO") {
      let existeDom = carrito.find(i => String(i.nombre).toUpperCase() === "DOMICILIO");
@@ -245,7 +254,6 @@ function modificarPedidoPOS(idAEditar, clienteObj, carritoJSON) {
        let estado = d[i][3] ? String(d[i][3]).trim() : "";
        estadoOriginal = estado;
        if (estado !== "PENDIENTE" && estado !== "POR PAGAR 💰" && estado !== "EN COCINA 👨‍🍳") throw new Error("El pedido ya está en reparto o despachado. No se puede modificar.");
-       
        if (estado === "EN COCINA 👨‍🍳") {
            let tipoP = d[i][9] ? String(d[i][9]).toUpperCase() : "LOCAL";
            let tipoPedidoLogico = (tipoP === "DOMICILIO" || tipoP === "PARA LLEVAR") ? "DOMICILIO" : "LOCAL";
@@ -256,7 +264,6 @@ function modificarPedidoPOS(idAEditar, clienteObj, carritoJSON) {
     }
   }
   
-  // Guardado en bloque
   for (let hoja of hojasModificadas) {
     let sheet = cacheHojasObj[hoja];
     let data = cacheDataObj[hoja];
@@ -390,7 +397,6 @@ function obtenerPedidosKDS() {
   const d = shP.getRange(2, 1, ultimaFila - 1, 13).getValues();
   
   const rec = getRecetasCached();
-  
   let cacheHojas = {
     "RECETAS": rec,
     "INV_COMIDA": ss.getSheetByName("INV_COMIDA") ? ss.getSheetByName("INV_COMIDA").getDataRange().getValues() : [],
@@ -525,13 +531,11 @@ function avanzarTicketCompleto(idPedido, omitirStr = "") {
         }
       }
       
-      // Batch Update
       for (let hoja of hojasModificadas) {
         let sheet = cacheHojas[hoja];
         let data = cacheData[hoja];
         sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
         
-        // Render colors dynamically based on threshold
         for (let j = 1; j < data.length; j++) {
             let stockActual = Number(data[j][4]) || 0;
             let stockMinimo = Number(data[j][7]) || 0;
@@ -652,11 +656,9 @@ function motorInventario(ss, prod, cant, modoA, omitir = [], cacheHojasObj = {},
             let salidasActuales = Number(dI[j][3]) || 0;
             let nuevasSalidas = modoA ? salidasActuales - gastoPorcion : salidasActuales + gastoPorcion;
             if (nuevasSalidas < 0) nuevasSalidas = 0;
-            
             let stockInicial = Number(dI[j][1]) || 0;
             let entradas = Number(dI[j][2]) || 0;
             let stockActualCalculado = stockInicial + entradas - nuevasSalidas;
-            
             dI[j][3] = nuevasSalidas;
             dI[j][4] = stockActualCalculado;
             hojasModificadas.add(hojaDestino);
@@ -683,11 +685,9 @@ function motorInventario(ss, prod, cant, modoA, omitir = [], cacheHojasObj = {},
           let salidasActuales = Number(dI[j][3]) || 0;
           let nuevasSalidas = modoA ? salidasActuales - cant : salidasActuales + cant;
           if (nuevasSalidas < 0) nuevasSalidas = 0;
-          
           let stockInicial = Number(dI[j][1]) || 0;
           let entradas = Number(dI[j][2]) || 0;
           let stockActualCalculado = stockInicial + entradas - nuevasSalidas;
-          
           dI[j][3] = nuevasSalidas;
           dI[j][4] = stockActualCalculado;
           hojasModificadas.add(h);
@@ -752,14 +752,12 @@ function generarReporteCostos() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let shC = ss.getSheetByName("ANALISIS_COSTOS");
   if (!shC) shC = ss.insertSheet("ANALISIS_COSTOS"); else shC.clear();
-  
   shC.appendRow(["Producto Final", "Costo Real", "Precio Sugerido (66% Margen)", "Precio Redondeado", "Precio Actual (RECETAS)", "Ajuste Necesario"]);
   shC.getRange("A1:F1").setFontWeight("bold").setBackground("#343a40").setFontColor("white");
   
   const rec = getRecetasCached();
   let productos = {};
   let cacheData = { "RECETAS": rec };
-  
   for (let i = 1; i < rec.length; i++) {
     let nombre = String(rec[i][0]).trim().toUpperCase();
     if (!nombre) continue;
@@ -806,7 +804,6 @@ function aplicarPreciosSugeridos() {
   const ui = SpreadsheetApp.getUi();
   const respuesta = ui.alert("⚠️ ACTUALIZACIÓN AUTOMÁTICA DE PRECIOS", "¿Sobreescribir precios en RECETAS?", ui.ButtonSet.YES_NO);
   if (respuesta !== ui.Button.YES) return;
-
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shC = ss.getSheetByName("ANALISIS_COSTOS");
   const shR = ss.getSheetByName("RECETAS");
@@ -814,7 +811,6 @@ function aplicarPreciosSugeridos() {
 
   const dataC = shC.getDataRange().getValues();
   const dataR = shR.getDataRange().getValues();
-
   let filasConPrecio = {};
   for (let i = 1; i < dataR.length; i++) {
      let p = String(dataR[i][0]).trim().toUpperCase();
@@ -853,7 +849,6 @@ function formatearRecetas() {
 
   const rangoDatos = sh.getRange(2, 1, ultimaFila - 1, sh.getLastColumn());
   rangoDatos.setBorder(false, false, false, false, false, false).setBackground(null);
-
   const valores = sh.getRange(2, 1, ultimaFila - 1, 1).getValues();
   let inicioBloque = 2;
   let recetaActual = String(valores[0][0]).trim();
@@ -974,10 +969,12 @@ function cierreDeTurno() {
   let newData = [d[0]];
   for (let i = 1; i < d.length; i++) {
     if (d[i][3] === "ENTREGADO ✅") { 
-      v++; tD += Number(d[i][8]) || 0; uT += Number(d[i][11]) || 0; 
+      v++;
+      tD += Number(d[i][8]) || 0; uT += Number(d[i][11]) || 0; 
       let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
       desglosePagos[metodo] = (desglosePagos[metodo] || 0) + (Number(d[i][8]) || 0);
-    } else if (d[i][3] === "❌ ANULADO") { anuladosCount++; } 
+    } else if (d[i][3] === "❌ ANULADO") { anuladosCount++;
+    } 
     else { newData.push(d[i]); }
   }
   if (v > 0) shB.appendRow([new Date(), tD, v, v, 0, "Cierre Exitoso", uT]);
@@ -997,7 +994,8 @@ function actualizarOcrearCliente(cel, nom, fecha) {
   if (fE !== -1) {
     shC.getRange(fE, 3).setValue(fecha);
     shC.getRange(fE, 4).setValue((Number(dC[fE - 1][3]) || 0) + 1);
-  } else { shC.appendRow([cel, nom, fecha, 1, "Cliente Nuevo"]); }
+  } else { shC.appendRow([cel, nom, fecha, 1, "Cliente Nuevo"]);
+  }
 }
 
 function obtenerAlertasInventario() {
@@ -1063,7 +1061,8 @@ function obtenerPedidosReparto() {
       ticketsMap[id].items.push(d[i][1] + " (x" + (Number(d[i][2]) || 1) + ")");
       let celdaPrecio = d[i][8];
       let precioGuardado = 0;
-      if (celdaPrecio !== "" && celdaPrecio !== null) { precioGuardado = Number(celdaPrecio) || 0; } 
+      if (celdaPrecio !== "" && celdaPrecio !== null) { precioGuardado = Number(celdaPrecio) || 0;
+      } 
       else {
           let nombreProd = d[i][1] ? String(d[i][1]).trim().toUpperCase() : "";
           precioGuardado = (precios[nombreProd] !== undefined ? precios[nombreProd] : 0) * (Number(d[i][2]) || 1);
