@@ -973,30 +973,67 @@ function cierreDeTurno() {
   }
 
   const d = shP.getDataRange().getValues();
-  let v = 0, tD = 0, uT = 0, anuladosCount = 0;
-  let desglosePagos = {};
+  let v = 0, tD = 0, uT = 0, anuladosCount = 0, valorAnulados = 0;
+  let tNequi = 0, tEfectivo = 0;
   let newData = [d[0]];
   let historicoData = []; 
 
+  let ticketsUnicos = new Set();
+  let ticketsAnuladosUnicos = new Set();
+
   for (let i = 1; i < d.length; i++) {
     let estado = String(d[i][3]).trim();
+    let idPedido = String(d[i][0]).trim();
+    let precioItem = Number(d[i][8]) || 0;
+    let utilidadItem = Number(d[i][11]) || 0;
+    let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
+
     if (estado === "ENTREGADO ✅") { 
-      v++;
-      tD += Number(d[i][8]) || 0; 
-      uT += Number(d[i][11]) || 0; 
-      let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
-      desglosePagos[metodo] = (desglosePagos[metodo] || 0) + (Number(d[i][8]) || 0);
+      v++; 
+      ticketsUnicos.add(idPedido);
+      tD += precioItem; 
+      uT += utilidadItem; 
+      
+      if (metodo.includes("NEQUI")) tNequi += precioItem;
+      else tEfectivo += precioItem; 
+      
       historicoData.push(d[i]); 
     } else if (estado === "❌ ANULADO") { 
-      anuladosCount++;
+      anuladosCount++; 
+      ticketsAnuladosUnicos.add(idPedido);
+      valorAnulados += precioItem;
       historicoData.push(d[i]); 
     } else { 
       newData.push(d[i]); 
     }
   }
 
+  let numPedidosReales = ticketsUnicos.size;
+  let ticketPromedio = numPedidosReales > 0 ? (tD / numPedidosReales) : 0;
+  let rentabilidad = tD > 0 ? (uT / tD) : 0; 
+
   if (v > 0) {
-      shB.appendRow([new Date(), tD, v, v, 0, "Cierre Exitoso", uT]);
+      shB.appendRow([
+        new Date(), 
+        tD, 
+        v, 
+        numPedidosReales, 
+        anuladosCount, 
+        "Cierre Exitoso", 
+        uT,
+        ticketPromedio,
+        rentabilidad,
+        tNequi,
+        tEfectivo,
+        valorAnulados
+      ]);
+      
+      let lastRow = shB.getLastRow();
+      shB.getRange(lastRow, 8).setNumberFormat("$#,##0"); 
+      shB.getRange(lastRow, 9).setNumberFormat("0.00%"); 
+      shB.getRange(lastRow, 10).setNumberFormat("$#,##0"); 
+      shB.getRange(lastRow, 11).setNumberFormat("$#,##0"); 
+      shB.getRange(lastRow, 12).setNumberFormat("$#,##0"); 
   }
 
   if (historicoData.length > 0) {
@@ -1008,7 +1045,7 @@ function cierreDeTurno() {
       shP.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
   }
   
-  return { ventas: v, total: tD, utilidad: uT, anulados: anuladosCount, pagos: desglosePagos };
+  return { ventas: v, total: tD, utilidad: uT, anulados: anuladosCount, nequi: tNequi, efectivo: tEfectivo };
 }
 
 function actualizarOcrearCliente(cel, nom, fecha) {
