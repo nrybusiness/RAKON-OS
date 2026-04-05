@@ -155,7 +155,7 @@ function obtenerMenuPOS() {
     let precio = Number(data[i][4]) || 0;
     let categoriaRaw = String(data[i][5] || "").trim().toUpperCase();
     let imgUrl = String(data[i][6] || "").trim();
-    let descripcionTexto = String(data[i][7] || "").trim(); // Lectura Columna H
+    let descripcionTexto = String(data[i][7] || "").trim(); 
 
     if (!prod) continue;
     if (categoriaRaw !== "" && !catMap[prod]) catMap[prod] = categoriaRaw;
@@ -963,23 +963,51 @@ function cierreDeTurno() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
   const shB = ss.getSheetByName("BITACORA_DIARIA");
+  
+  let shH = ss.getSheetByName("HISTORICO_PEDIDOS");
+  if (!shH) {
+    shH = ss.insertSheet("HISTORICO_PEDIDOS");
+    const headers = shP.getRange(1, 1, 1, shP.getLastColumn()).getValues()[0];
+    shH.appendRow(headers);
+    shH.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#343a40").setFontColor("white");
+  }
+
   const d = shP.getDataRange().getValues();
   let v = 0, tD = 0, uT = 0, anuladosCount = 0;
   let desglosePagos = {};
   let newData = [d[0]];
+  let historicoData = []; 
+
   for (let i = 1; i < d.length; i++) {
-    if (d[i][3] === "ENTREGADO ✅") { 
+    let estado = String(d[i][3]).trim();
+    if (estado === "ENTREGADO ✅") { 
       v++;
-      tD += Number(d[i][8]) || 0; uT += Number(d[i][11]) || 0; 
+      tD += Number(d[i][8]) || 0; 
+      uT += Number(d[i][11]) || 0; 
       let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
       desglosePagos[metodo] = (desglosePagos[metodo] || 0) + (Number(d[i][8]) || 0);
-    } else if (d[i][3] === "❌ ANULADO") { anuladosCount++;
-    } 
-    else { newData.push(d[i]); }
+      historicoData.push(d[i]); 
+    } else if (estado === "❌ ANULADO") { 
+      anuladosCount++;
+      historicoData.push(d[i]); 
+    } else { 
+      newData.push(d[i]); 
+    }
   }
-  if (v > 0) shB.appendRow([new Date(), tD, v, v, 0, "Cierre Exitoso", uT]);
+
+  if (v > 0) {
+      shB.appendRow([new Date(), tD, v, v, 0, "Cierre Exitoso", uT]);
+  }
+
+  if (historicoData.length > 0) {
+      shH.getRange(shH.getLastRow() + 1, 1, historicoData.length, historicoData[0].length).setValues(historicoData);
+  }
+
   shP.getDataRange().clearContent();
-  if (newData.length > 0) shP.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
+  if (newData.length > 0) {
+      shP.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
+  }
+  
   return { ventas: v, total: tD, utilidad: uT, anulados: anuladosCount, pagos: desglosePagos };
 }
 
