@@ -1,13 +1,14 @@
 /**
  * RAKON - LÓGICA DE NEGOCIO (Backend.gs)
- * Base de datos, inventario y ejecución de reglas comerciales.
-*/
+ * Base de datos, inventario y ejecución de reglas comerciales con IPS Activo v1.3.
+ */
 
 const COSTO_EMPAQUE_FIJO = 2000;
 const VALOR_BASE_DOMICILIO = 2000;
 const VALOR_KM_ADICIONAL = 2000;
-const RADIO_MAXIMO_KM = 5;
+const RADIO_MAXIMO_KM = 10;
 const ORIGEN_RESTAURANTE = "Cl 20E #42-12, Zamora, Bello, Antioquia";
+const TASA_KERNEL = 0.10;
 
 function getRecetasCached() {
   const cache = CacheService.getScriptCache();
@@ -166,6 +167,7 @@ function obtenerMenuPOS() {
               precio: precio, 
               imagen: imgUrl,
               descripcion: descripcionTexto
+          
             };
         } else if (descripcionTexto !== "" && !mapPOS[prod].descripcion) {
             mapPOS[prod].descripcion = descripcionTexto;
@@ -179,7 +181,6 @@ function obtenerMenuPOS() {
   for (let prod in mapPOS) {
     let catOficial = catMap[prod] || "PRINCIPAL"; 
     if (catOficial.includes("INGREDIENTE") || prod === "EMPAQUE LLEVAR" || prod === "COSTO EMPAQUE") continue;
-    
     catalogo.push({ 
         nombre: prod, 
         precio: mapPOS[prod].precio, 
@@ -194,29 +195,60 @@ function obtenerMenuPOS() {
   return catalogo;
 }
 
-function guardarPedidoPOS(clienteObj, carritoJSON) {
+// 🛡️ MÓDULO IPS: Intrusion Prevention System
+function verificarBloqueo(uid, celular) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName("BLACKLIST");
+  if (!sh) return false;
+  const data = sh.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    let baneado = String(data[i][0]).trim();
+    if (baneado === String(uid).trim() || (celular && baneado === String(celular).trim())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function registrarEnBlacklist(identificador, motivo) {
+  if (!identificador) return;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName("BLACKLIST");
+  if (!sh) {
+     sh = ss.insertSheet("BLACKLIST");
+     sh.appendRow(["IDENTIFICADOR", "MOTIVO", "FECHA"]);
+     sh.getRange("A1:C1").setBackground("#000000").setFontColor("white").setFontWeight("bold");
+  }
+  sh.appendRow([identificador, motivo, new Date()]);
+}
+
+// 🛡️ PARCHE KERNEL v1.3: Tolerancia Dinámica para Domicilios y Salsas
+function guardarPedidoPOS(clienteObj, carritoJSON, uid) {
+  if (verificarBloqueo(uid, clienteObj.celular)) {
+      throw new Error("ACCESO DENEGADO: El dispositivo o usuario se encuentra bloqueado por políticas de seguridad.");
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
   let carrito = JSON.parse(carritoJSON);
-  let nombre = String(clienteObj.nombre || "Cliente POS").trim().toUpperCase();
-  let celular = String(clienteObj.celular || "").trim();
-  let direccion = String(clienteObj.direccion || "").trim();
-  let notas = String(clienteObj.notas || "").trim();
-  let tipo_pedido = String(clienteObj.tipo_pedido || "LOCAL").trim().toUpperCase();
-  let metodo_pago = String(clienteObj.metodo_pago || "EFECTIVO").trim().toUpperCase();
+
+  let nombre = sanitizarTexto(clienteObj.nombre || "Cliente POS").toUpperCase();
+  let celular = sanitizarTexto(clienteObj.celular || "");
+  let direccion = sanitizarTexto(clienteObj.direccion || "");
+  let notas = sanitizarTexto(clienteObj.notas || "");
+  let tipo_pedido = sanitizarTexto(clienteObj.tipo_pedido || "LOCAL").toUpperCase();
+  let metodo_pago = sanitizarTexto(clienteObj.metodo_pago || "EFECTIVO").toUpperCase();
+
   let turnoTemp = Math.floor(1000 + Math.random() * 9000).toString();
-  const timestampID = Date.now().toString(36).toUpperCase().slice(-6); 
+  const timestampID = Date.now().toString(36).toUpperCase().slice(-6);
   let idOficial = celular ? `${celular}-${turnoTemp}-${timestampID}` : `POS-${turnoTemp}-${timestampID}`;
   let fechaActual = new Date();
   let estadoInicial = (metodo_pago === "NEQUI" || (["LOCAL", "LOCAL ⚡", "PARA LLEVAR"].includes(tipo_pedido) && metodo_pago === "EFECTIVO")) ?
   "POR PAGAR 💰" : "PENDIENTE";
-  
+
   if (tipo_pedido === "DOMICILIO") {
      let existeDom = carrito.find(i => String(i.nombre).toUpperCase() === "DOMICILIO");
-     if (!existeDom) {
-         let pDom = VALOR_BASE_DOMICILIO;
-         carrito.push({nombre: "DOMICILIO", cant: 1, precioTotalCalculado: pDom});
-     }
+     if (!existeDom) carrito.push({nombre: "DOMICILIO", cant: 1, precioTotalCalculado: VALOR_BASE_DOMICILIO});
   }
 
   if (tipo_pedido === "DOMICILIO" || tipo_pedido === "PARA LLEVAR") {
@@ -224,13 +256,53 @@ function guardarPedidoPOS(clienteObj, carritoJSON) {
      if (!existeEmp) carrito.push({nombre: "COSTO EMPAQUE", cant: 1, precioTotalCalculado: COSTO_EMPAQUE_FIJO});
   }
 
+  const recetasData = getRecetasCached();
+  let preciosSeguros = {};
+  for(let r = 1; r < recetasData.length; r++) {
+      if(recetasData[r][0]) {
+          preciosSeguros[String(recetasData[r][0]).trim().toUpperCase()] = Number(recetasData[r][4]) || 0;
+      }
+  }
+
   if (carrito.length === 0) {
      shP.appendRow([idOficial, "ORDEN VACÍA", 1, estadoInicial, fechaActual, nombre, celular, notas, 0, tipo_pedido, metodo_pago, "", direccion]);
   } else {
+     let manipulacionDetectada = false;
+
      let filas = carrito.map(item => {
-        let precioCalculado = item.precioTotalCalculado !== undefined ? Number(item.precioTotalCalculado) : (Number(item.precio) * Number(item.cant));
-        return [idOficial, String(item.nombre).toUpperCase(), item.cant, estadoInicial, fechaActual, nombre, celular, notas, precioCalculado, tipo_pedido, metodo_pago, "", direccion];
+        let nombreItem = sanitizarTexto(item.nombre).toUpperCase();
+        let cantReal = Number(item.cant) || 1;
+
+        let precioBaseBd = preciosSeguros[nombreItem] || 0;
+        let precioForzado = precioBaseBd * cantReal;
+        let precioFrontend = item.precioTotalCalculado !== undefined ? Number(item.precioTotalCalculado) : (Number(item.precio) * cantReal);
+
+        // Lógica de Tolerancia Dinámica (Parche v1.3)
+        if (nombreItem === "DOMICILIO") {
+            if (precioFrontend < VALOR_BASE_DOMICILIO) {
+                precioFrontend = VALOR_BASE_DOMICILIO; // Autocorrección si el cálculo frontend falló
+            }
+            precioForzado = precioFrontend; // Permite el valor dinámico de Google Maps
+        } else if (nombreItem === "COSTO EMPAQUE") {
+            precioForzado = COSTO_EMPAQUE_FIJO * cantReal;
+            if (precioFrontend < precioForzado) precioFrontend = precioForzado;
+        } else if (nombreItem !== "CABRA DE ORO") {
+            // Evaluamos solo si el cliente envía un precio menor al real de la base de datos
+            // Ítems gratis o no registrados (precio 0) pasan sin activar la alarma.
+            if (precioFrontend < precioForzado) {
+                manipulacionDetectada = true;
+            }
+        }
+
+        return [idOficial, nombreItem, cantReal, estadoInicial, fechaActual, nombre, celular, notas, precioFrontend, tipo_pedido, metodo_pago, "", direccion];
      });
+
+     if (manipulacionDetectada) {
+         registrarEnBlacklist(uid, "Parameter Tampering - Modificación de Precios");
+         if (celular) registrarEnBlacklist(celular, "Parameter Tampering - Modificación de Precios");
+         throw new Error("TRANSACCIÓN ABORTADA: Violación de integridad detectada. El dispositivo ha sido bloqueado.");
+     }
+
      shP.getRange(Math.max(shP.getLastRow() + 1, 2), 1, filas.length, filas[0].length).setValues(filas);
   }
   return idOficial;
@@ -271,7 +343,7 @@ function modificarPedidoPOS(idAEditar, clienteObj, carritoJSON) {
   }
 
   if (!filasBorradas) throw new Error("No se encontró el pedido a modificar.");
-  return guardarPedidoPOS(clienteObj, carritoJSON);
+  return guardarPedidoPOS(clienteObj, carritoJSON, "ADMIN_MOD");
 }
 
 function guardarExtraTicketRemoto(idPedido, extraName, cobroExtra) {
@@ -281,7 +353,8 @@ function guardarExtraTicketRemoto(idPedido, extraName, cobroExtra) {
   let idBuscado = String(idPedido).trim();
   let datosPedido = null;
   for (let i = 1; i < d.length; i++) {
-    if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i]; break; }
+    if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i];
+    break; }
   }
   if (!datosPedido) throw new Error("Pedido no encontrado.");
   let cobro = Number(cobroExtra) || 0;
@@ -454,11 +527,14 @@ function obtenerPedidosKDS() {
     if (t.est === "PENDIENTE") {
       let reqMap = {};
       let tipoPedidoParaReq = (t.tipo.toUpperCase() === "DOMICILIO" || t.tipo.toUpperCase() === "PARA LLEVAR") ? "DOMICILIO" : "LOCAL";
-      for (let item of t.itemsObj) { acumularRequerimientos(item.nombre, item.cant, cacheHojas, reqMap, tipoPedidoParaReq); }
+      for (let item of t.itemsObj) { acumularRequerimientos(item.nombre, item.cant, cacheHojas, reqMap, tipoPedidoParaReq);
+      }
       
       let faltantes = [];
-      for (let key in reqMap) { if (reqMap[key].stock < (reqMap[key].gasto - 0.0001)) { faltantes.push(reqMap[key].nombre); } }
-      if (faltantes.length > 0) { t.bloqueado = true; t.motivosBloqueo = [...new Set(faltantes)]; }
+      for (let key in reqMap) { if (reqMap[key].stock < (reqMap[key].gasto - 0.0001)) { faltantes.push(reqMap[key].nombre);
+      } }
+      if (faltantes.length > 0) { t.bloqueado = true; t.motivosBloqueo = [...new Set(faltantes)];
+      }
     }
   }
   
@@ -485,7 +561,8 @@ function avanzarTicketCompleto(idPedido, omitirStr = "") {
 
       for (let i = 1; i < d.length; i++) {
         let idActual = d[i][0] ? String(d[i][0]).trim() : "";
-        if (idActual === idBuscado) { tipoPedidoTicket = d[i][9] ? String(d[i][9]).trim().toUpperCase() : "LOCAL"; break; }
+        if (idActual === idBuscado) { tipoPedidoTicket = d[i][9] ? String(d[i][9]).trim().toUpperCase() : "LOCAL"; break;
+        }
       }
       
       let tipoPedidoLogico = (tipoPedidoTicket === "DOMICILIO" || tipoPedidoTicket === "PARA LLEVAR") ? "DOMICILIO" : "LOCAL";
@@ -508,8 +585,10 @@ function avanzarTicketCompleto(idPedido, omitirStr = "") {
             
             let celdaPrecio = d[i][8];
             let pVentaFinal = 0;
-            if (celdaPrecio !== "" && celdaPrecio !== null) { pVentaFinal = (Number(celdaPrecio) || 0) / Number(d[i][2]); } 
-            else { pVentaFinal = pVenta; }
+            if (celdaPrecio !== "" && celdaPrecio !== null) { pVentaFinal = (Number(celdaPrecio) || 0) / Number(d[i][2]);
+            } 
+            else { pVentaFinal = pVenta;
+            }
             
             shP.getRange(i + 1, 9).setValue(pVentaFinal * d[i][2]);
             shP.getRange(i + 1, 12).setValue((pVentaFinal * d[i][2]) - (cTotal * d[i][2]));
@@ -525,7 +604,8 @@ function avanzarTicketCompleto(idPedido, omitirStr = "") {
             } else {
               shP.getRange(i + 1, 4).setValue("ENTREGADO ✅");
               shP.getRange(i + 1, 1, 1, 13).setBackground(null);
-              if (!clienteActualizado) { actualizarOcrearCliente(d[i][6], d[i][5], d[i][4]); clienteActualizado = true; }
+              if (!clienteActualizado) { actualizarOcrearCliente(d[i][6], d[i][5], d[i][4]); clienteActualizado = true;
+              }
             }
           }
         }
@@ -555,7 +635,8 @@ function ajustarTotalPedidoRemoto(idPedido, diferencia) {
   let idBuscado = String(idPedido).trim();
   let datosPedido = null;
   for (let i = 1; i < d.length; i++) {
-    if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i]; break; }
+    if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i];
+    break; }
   }
   if (!datosPedido) throw new Error("Pedido no encontrado.");
   shP.appendRow([idBuscado, "AJUSTE DE PRECIO ADMIN", 1, datosPedido[3], new Date(), datosPedido[5], datosPedido[6], "Ajuste manual", diferencia, datosPedido[9], datosPedido[10], 0, datosPedido[12]]);
@@ -586,7 +667,8 @@ function anularTicketEspecifico(idPedido) {
   for (let i = 1; i < d.length; i++) {
     let idActual = d[i][0] ? String(d[i][0]).trim() : "";
     if (idActual === idBuscado) {
-      if (["EN COCINA 👨‍🍳", "POR PAGAR 💰", "PENDIENTE", "EN REPARTO 🛵"].includes(d[i][3])) { ejecutarLogicaAnulacion(i + 1); }
+      if (["EN COCINA 👨‍🍳", "POR PAGAR 💰", "PENDIENTE", "EN REPARTO 🛵"].includes(d[i][3])) { ejecutarLogicaAnulacion(i + 1);
+      }
     }
   }
 }
@@ -973,7 +1055,7 @@ function cierreDeTurno() {
   }
 
   const d = shP.getDataRange().getValues();
-  let v = 0, tD = 0, uT = 0, anuladosCount = 0, valorAnulados = 0;
+  let v = 0, tD = 0, uT = 0, anuladosCount = 0, valorAnulados = 0, tComisionKernel = 0;
   let tNequi = 0, tEfectivo = 0;
   let newData = [d[0]];
   let historicoData = []; 
@@ -987,22 +1069,27 @@ function cierreDeTurno() {
     let precioItem = Number(d[i][8]) || 0;
     let utilidadItem = Number(d[i][11]) || 0;
     let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
+    let nombreProd = String(d[i][1]).trim().toUpperCase();
 
     if (estado === "ENTREGADO ✅") { 
-      v++; 
+      v++;
       ticketsUnicos.add(idPedido);
       tD += precioItem; 
       uT += utilidadItem; 
       
+      if (nombreProd !== "DOMICILIO" && nombreProd !== "COSTO EMPAQUE") {
+          tComisionKernel += (precioItem * TASA_KERNEL);
+      }
+      
       if (metodo.includes("NEQUI")) tNequi += precioItem;
       else tEfectivo += precioItem; 
       
-      historicoData.push(d[i]); 
+      historicoData.push(d[i]);
     } else if (estado === "❌ ANULADO") { 
       anuladosCount++; 
       ticketsAnuladosUnicos.add(idPedido);
       valorAnulados += precioItem;
-      historicoData.push(d[i]); 
+      historicoData.push(d[i]);
     } else { 
       newData.push(d[i]); 
     }
@@ -1025,15 +1112,16 @@ function cierreDeTurno() {
         rentabilidad,
         tNequi,
         tEfectivo,
-        valorAnulados
+        valorAnulados,
+        tComisionKernel
       ]);
-      
       let lastRow = shB.getLastRow();
       shB.getRange(lastRow, 8).setNumberFormat("$#,##0"); 
       shB.getRange(lastRow, 9).setNumberFormat("0.00%"); 
       shB.getRange(lastRow, 10).setNumberFormat("$#,##0"); 
       shB.getRange(lastRow, 11).setNumberFormat("$#,##0"); 
-      shB.getRange(lastRow, 12).setNumberFormat("$#,##0"); 
+      shB.getRange(lastRow, 12).setNumberFormat("$#,##0");
+      shB.getRange(lastRow, 13).setNumberFormat("$#,##0");
   }
 
   if (historicoData.length > 0) {
@@ -1045,7 +1133,7 @@ function cierreDeTurno() {
       shP.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
   }
   
-  return { ventas: v, total: tD, utilidad: uT, anulados: anuladosCount, nequi: tNequi, efectivo: tEfectivo };
+  return { ventas: v, total: tD, utilidad: uT, anulados: anuladosCount, nequi: tNequi, efectivo: tEfectivo, comision_kernel: tComisionKernel };
 }
 
 function actualizarOcrearCliente(cel, nom, fecha) {
@@ -1055,7 +1143,8 @@ function actualizarOcrearCliente(cel, nom, fecha) {
   if (!shC) return;
   const dC = shC.getDataRange().getValues();
   let fE = -1;
-  for (let i = 1; i < dC.length; i++) { if (dC[i][0] && String(dC[i][0]).trim() === celBuscado) { fE = i + 1; break; } }
+  for (let i = 1; i < dC.length; i++) { if (dC[i][0] && String(dC[i][0]).trim() === celBuscado) { fE = i + 1;
+  break; } }
   if (fE !== -1) {
     shC.getRange(fE, 3).setValue(fecha);
     shC.getRange(fE, 4).setValue((Number(dC[fE - 1][3]) || 0) + 1);
@@ -1153,7 +1242,8 @@ function finalizarReparto(idPedido) {
       if (est === "EN REPARTO 🛵") {
         shP.getRange(i + 1, 4).setValue("ENTREGADO ✅");
         shP.getRange(i + 1, 1, 1, 13).setBackground(null);
-        if (!clienteActualizado) { actualizarOcrearCliente(d[i][6], d[i][5], d[i][4]); clienteActualizado = true; }
+        if (!clienteActualizado) { actualizarOcrearCliente(d[i][6], d[i][5], d[i][4]); clienteActualizado = true;
+        }
       }
     }
   }
@@ -1177,7 +1267,8 @@ function ejecutarConfirmacionPagoRemoto(turno) {
   return "OK";
 }
 
-function obtenerEstadoLocal() { return PropertiesService.getScriptProperties().getProperty('ESTADO_LOCAL') || 'AUTO'; }
+function obtenerEstadoLocal() { return PropertiesService.getScriptProperties().getProperty('ESTADO_LOCAL') || 'AUTO';
+}
 function fijarEstadoLocal(estado) { PropertiesService.getScriptProperties().setProperty('ESTADO_LOCAL', estado); return estado; }
 
 function marcarPedidoRushRemoto(idStr) {
