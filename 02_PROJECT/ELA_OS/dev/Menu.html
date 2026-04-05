@@ -62,6 +62,7 @@
                 <div class="h-44 w-full bg-gray-200 bg-cover bg-center border-b border-[#e5d4a5]" :style="prod.imagen ? `background-image: url('${prod.imagen}')` : 'background-image: url(https://placehold.co/400x300/F7E4B2/3D2B1F?text=%F0%9F%8D%94)'"></div>
                 <div class="p-4 flex flex-col flex-grow">
                   <h3 class="text-lg font-display text-oscuro mb-1 leading-tight" x-text="prod.nombre"></h3>
+                  <p class="text-xs text-gray-600 mb-3 leading-snug line-clamp-3" x-show="prod.descripcion" x-text="prod.descripcion"></p>
                   <p class="text-acento font-bold text-xl mb-4 mt-auto">$<span x-text="prod.precio.toLocaleString()"></span></p>
                   <button @click="procesarSeleccion(prod)" :disabled="!tiendaAbierta" class="w-full bg-oscuro text-white py-3 rounded-md font-bold hover:bg-gray-800 transition text-lg tracking-wide shadow-md disabled:opacity-50 disabled:cursor-not-allowed">AGREGAR</button>
                 </div>
