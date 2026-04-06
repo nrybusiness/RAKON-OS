@@ -1,6 +1,6 @@
 /**
  * RAKON - LÓGICA DE NEGOCIO (Backend.gs)
- * Base de datos, inventario y ejecución de reglas comerciales con IPS Activo v1.3.
+ * Base de datos, inventario y ejecución de reglas comerciales con IPS Activo.
  */
 
 const COSTO_EMPAQUE_FIJO = 2000;
@@ -167,7 +167,6 @@ function obtenerMenuPOS() {
               precio: precio, 
               imagen: imgUrl,
               descripcion: descripcionTexto
-          
             };
         } else if (descripcionTexto !== "" && !mapPOS[prod].descripcion) {
             mapPOS[prod].descripcion = descripcionTexto;
@@ -222,7 +221,7 @@ function registrarEnBlacklist(identificador, motivo) {
   sh.appendRow([identificador, motivo, new Date()]);
 }
 
-// 🛡️ PARCHE KERNEL v1.3: Tolerancia Dinámica para Domicilios y Salsas
+// 🍔 LÓGICA DE PEDIDOS CON BOLSA DE SALSAS GRATIS
 function guardarPedidoPOS(clienteObj, carritoJSON, uid) {
   if (verificarBloqueo(uid, clienteObj.celular)) {
       throw new Error("ACCESO DENEGADO: El dispositivo o usuario se encuentra bloqueado por políticas de seguridad.");
@@ -231,14 +230,12 @@ function guardarPedidoPOS(clienteObj, carritoJSON, uid) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
   let carrito = JSON.parse(carritoJSON);
-
   let nombre = sanitizarTexto(clienteObj.nombre || "Cliente POS").toUpperCase();
   let celular = sanitizarTexto(clienteObj.celular || "");
   let direccion = sanitizarTexto(clienteObj.direccion || "");
   let notas = sanitizarTexto(clienteObj.notas || "");
   let tipo_pedido = sanitizarTexto(clienteObj.tipo_pedido || "LOCAL").toUpperCase();
   let metodo_pago = sanitizarTexto(clienteObj.metodo_pago || "EFECTIVO").toUpperCase();
-
   let turnoTemp = Math.floor(1000 + Math.random() * 9000).toString();
   const timestampID = Date.now().toString(36).toUpperCase().slice(-6);
   let idOficial = celular ? `${celular}-${turnoTemp}-${timestampID}` : `POS-${turnoTemp}-${timestampID}`;
@@ -269,26 +266,65 @@ function guardarPedidoPOS(clienteObj, carritoJSON, uid) {
   } else {
      let manipulacionDetectada = false;
 
+     // 👇 INICIO: CÁLCULO DE BOLSA GLOBAL DE SALSAS GRATIS 👇
+     let salsasGratisDisponibles = 0;
+     carrito.forEach(item => {
+         let nombreItemTemp = sanitizarTexto(item.nombre).toUpperCase();
+         // Consideramos como "producto principal" a todo lo que NO sea salsa, domicilio ni empaque
+         if (!nombreItemTemp.includes("SALSA") && 
+             !nombreItemTemp.includes("DOMICILIO") && 
+             !nombreItemTemp.includes("EMPAQUE") && 
+             nombreItemTemp !== "CABRA DE ORO") {
+             
+             let cantP = Math.max(1, Number(item.cant) || 1); 
+             salsasGratisDisponibles += (cantP * 2); // Agrega 2 salsas al pozo por cada producto
+         }
+     });
+     // 👆 FIN CÁLCULO 👆
+
      let filas = carrito.map(item => {
         let nombreItem = sanitizarTexto(item.nombre).toUpperCase();
-        let cantReal = Number(item.cant) || 1;
+        
+        // Parche de seguridad para que no inyecten cantidades negativas
+        let cantReal = Math.max(1, Number(item.cant) || 1);
 
         let precioBaseBd = preciosSeguros[nombreItem] || 0;
         let precioForzado = precioBaseBd * cantReal;
         let precioFrontend = item.precioTotalCalculado !== undefined ? Number(item.precioTotalCalculado) : (Number(item.precio) * cantReal);
 
-        // Lógica de Tolerancia Dinámica (Parche v1.3)
+        // Tolerancia Dinámica IPS
         if (nombreItem === "DOMICILIO") {
-            if (precioFrontend < VALOR_BASE_DOMICILIO) {
-                precioFrontend = VALOR_BASE_DOMICILIO; // Autocorrección si el cálculo frontend falló
-            }
-            precioForzado = precioFrontend; // Permite el valor dinámico de Google Maps
+            if (precioFrontend < VALOR_BASE_DOMICILIO) precioFrontend = VALOR_BASE_DOMICILIO; 
+            precioForzado = precioFrontend; 
         } else if (nombreItem === "COSTO EMPAQUE") {
             precioForzado = COSTO_EMPAQUE_FIJO * cantReal;
             if (precioFrontend < precioForzado) precioFrontend = precioForzado;
+        
+        // 👇 INICIO: APLICACIÓN DE SALSAS AL IPS 👇
+        } else if (nombreItem.includes("SALSA")) {
+            let salsasACobrar = 0;
+            
+            // Consumimos las salsas del "pozo global"
+            if (salsasGratisDisponibles >= cantReal) {
+                salsasGratisDisponibles -= cantReal;
+                salsasACobrar = 0;
+            } else {
+                salsasACobrar = cantReal - salsasGratisDisponibles;
+                salsasGratisDisponibles = 0; 
+            }
+            
+            // Cobramos solo las que superen el límite
+            precioForzado = precioBaseBd * salsasACobrar;
+            
+            // Auto-corrección: Si el frontend manda un precio menor al forzado, 
+            // ajustamos el precio para cobrarlo bien, SIN enviar a Blacklist.
+            if (precioFrontend < precioForzado) {
+                precioFrontend = precioForzado;
+            }
+        // 👆 FIN SALSAS 👆
+
         } else if (nombreItem !== "CABRA DE ORO") {
-            // Evaluamos solo si el cliente envía un precio menor al real de la base de datos
-            // Ítems gratis o no registrados (precio 0) pasan sin activar la alarma.
+            // Evaluamos artículos normales
             if (precioFrontend < precioForzado) {
                 manipulacionDetectada = true;
             }
@@ -354,7 +390,7 @@ function guardarExtraTicketRemoto(idPedido, extraName, cobroExtra) {
   let datosPedido = null;
   for (let i = 1; i < d.length; i++) {
     if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i];
-    break; }
+      break; }
   }
   if (!datosPedido) throw new Error("Pedido no encontrado.");
   let cobro = Number(cobroExtra) || 0;
@@ -636,7 +672,7 @@ function ajustarTotalPedidoRemoto(idPedido, diferencia) {
   let datosPedido = null;
   for (let i = 1; i < d.length; i++) {
     if (d[i][0] && String(d[i][0]).trim() === idBuscado) { datosPedido = d[i];
-    break; }
+      break; }
   }
   if (!datosPedido) throw new Error("Pedido no encontrado.");
   shP.appendRow([idBuscado, "AJUSTE DE PRECIO ADMIN", 1, datosPedido[3], new Date(), datosPedido[5], datosPedido[6], "Ajuste manual", diferencia, datosPedido[9], datosPedido[10], 0, datosPedido[12]]);
@@ -1070,13 +1106,11 @@ function cierreDeTurno() {
     let utilidadItem = Number(d[i][11]) || 0;
     let metodo = d[i][10] ? String(d[i][10]).trim().toUpperCase() : "EFECTIVO";
     let nombreProd = String(d[i][1]).trim().toUpperCase();
-
     if (estado === "ENTREGADO ✅") { 
       v++;
       ticketsUnicos.add(idPedido);
       tD += precioItem; 
-      uT += utilidadItem; 
-      
+      uT += utilidadItem;
       if (nombreProd !== "DOMICILIO" && nombreProd !== "COSTO EMPAQUE") {
           tComisionKernel += (precioItem * TASA_KERNEL);
       }
@@ -1086,19 +1120,18 @@ function cierreDeTurno() {
       
       historicoData.push(d[i]);
     } else if (estado === "❌ ANULADO") { 
-      anuladosCount++; 
+      anuladosCount++;
       ticketsAnuladosUnicos.add(idPedido);
       valorAnulados += precioItem;
       historicoData.push(d[i]);
     } else { 
-      newData.push(d[i]); 
+      newData.push(d[i]);
     }
   }
 
   let numPedidosReales = ticketsUnicos.size;
   let ticketPromedio = numPedidosReales > 0 ? (tD / numPedidosReales) : 0;
-  let rentabilidad = tD > 0 ? (uT / tD) : 0; 
-
+  let rentabilidad = tD > 0 ? (uT / tD) : 0;
   if (v > 0) {
       shB.appendRow([
         new Date(), 
@@ -1144,7 +1177,7 @@ function actualizarOcrearCliente(cel, nom, fecha) {
   const dC = shC.getDataRange().getValues();
   let fE = -1;
   for (let i = 1; i < dC.length; i++) { if (dC[i][0] && String(dC[i][0]).trim() === celBuscado) { fE = i + 1;
-  break; } }
+      break; } }
   if (fE !== -1) {
     shC.getRange(fE, 3).setValue(fecha);
     shC.getRange(fE, 4).setValue((Number(dC[fE - 1][3]) || 0) + 1);
