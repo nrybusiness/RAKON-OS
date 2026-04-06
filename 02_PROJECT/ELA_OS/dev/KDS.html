@@ -4,42 +4,51 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KDS - Hunger Burgers</title>
+  <title>KDS Cocina - Hunger Burgers</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = { theme: { extend: { colors: { base: '#F7E4B2', oscuro: '#3D2B1F', acento: '#C78D2B', danger: '#dc3545' }, fontFamily: { sans: ['Quicksand', 'sans-serif'], display: ['Fredoka One', 'cursive'] } } } }
   </script>
   <style>
-    body { background-color: #212529; color: #F7E4B2; font-family: 'Quicksand', sans-serif; }
+    body { background-color: #f8f9fa; font-family: 'Quicksand', sans-serif; margin: 0; padding: 0; }
     .font-display { font-family: 'Fredoka One', cursive; font-weight: normal; }
     @keyframes parpadeoRush { 0% { box-shadow: 0 0 5px rgba(220,53,69,0.4); border-color: #dc3545; } 50% { box-shadow: 0 0 20px rgba(220,53,69,1); border-color: #ff4d4d; } 100% { box-shadow: 0 0 5px rgba(220,53,69,0.4); border-color: #dc3545; } }
     .rush-ticket { border-width: 3px; border-top-width: 8px; animation: parpadeoRush 1.5s infinite; }
-    #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; font-size: 1.5em; font-weight: bold; z-index: 1000; flex-direction: column; gap:15px; color: #C78D2B;}
+    #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; font-size: 1.5em; font-weight: bold; z-index: 9999; flex-direction: column; gap:15px; color: #C78D2B; }
     .loader { border-top-color: #C78D2B; -webkit-animation: spinner 1s linear infinite; animation: spinner 1s linear infinite; }
     @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; padding: 15px;}
   </style>
 </head>
 <body class="antialiased pb-12">
-
-  <header class="bg-black p-4 shadow-md flex justify-between items-center border-b-2 border-acento sticky top-0 z-50">
+  <header class="bg-[#212529] text-white p-4 shadow-md flex justify-between items-center border-b-4 border-acento sticky top-0 z-50">
     <div class="flex items-center gap-3">
-      <img src="https://humgerimages.carrd.co/assets/images/image12.png?v=9dc15a34" alt="KDS" class="h-12">
-      <h1 class="text-2xl font-display tracking-widest text-acento">KDS COCINA</h1>
+      <h1 class="text-2xl font-display tracking-widest text-white">👨‍🍳 KDS - Cocina</h1>
     </div>
-    <div class="bg-green-600 px-3 py-1.5 rounded-lg text-white font-bold text-xs shadow-inner flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> ALARMA ON
+    <div class="bg-green-600 px-4 py-2 rounded-lg font-bold text-sm shadow-inner flex items-center gap-2 cursor-default">
+      <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> Alarma ON
     </div>
   </header>
 
+  <div class="p-6 max-w-full mx-auto flex flex-wrap gap-6 justify-center items-start" id="ticketsContainer">
+    <div class="w-full flex flex-col items-center justify-center mt-10">
+      <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" class="h-32 drop-shadow-xl mb-4 animate-pulse">
+      <h3 class="text-gray-500 font-bold text-xl">Cargando pedidos...</h3>
+    </div>
+  </div>
+
   <audio id="sonidoAlarma" preload="auto">
-  <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
-  <source src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" type="audio/mpeg">
-</audio>
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    <source src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" type="audio/mpeg">
+  </audio>
 
-  <div id="loadingOverlay"><div class="loader rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>Procesando petición...</div>
+  <div id="loadingOverlay">
+    <div class="loader rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
+    Procesando...
+  </div>
 
-  <div id="modalReceta" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
+  <div id="modalReceta" class="modal-overlay">
     <div class="bg-[#212529] text-base p-6 rounded-xl max-w-sm w-full shadow-2xl border border-[#495057]">
       <div class="flex justify-between items-center border-b border-[#343a40] pb-3 mb-4">
         <h2 id="tituloReceta" class="text-xl font-display text-white m-0">📖 Receta</h2>
@@ -49,17 +58,11 @@
     </div>
   </div>
 
-  <div class="p-6 max-w-full mx-auto flex flex-wrap gap-5 justify-center items-start" id="ticketsContainer">
-    <div class="w-full flex flex-col items-center justify-center mt-10">
-      <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" class="h-32 drop-shadow-xl mb-4 animate-pulse">
-      <h3 class="text-gray-500 font-bold text-xl">Cargando pedidos...</h3>
-    </div>
-  </div>
-
   <script>
     window.onload = () => { cargarSistemaCentral(); };
 
-    let ticketsConocidos = []; let alarmasActivadas = true; let audioDesbloqueado = false; let primeraCarga = true; let datosKDSGlobal = [];
+    let ticketsConocidos = []; let alarmasActivadas = true; let audioDesbloqueado = false; let primeraCarga = true; 
+    let pollingActivoKds = true;
 
     function errorServidor(e) { document.getElementById('loadingOverlay').style.display = 'none'; alert("❌ Error: " + (e.message || e)); }
 
@@ -73,98 +76,115 @@
     function dispararAlarma() {
       if (!alarmasActivadas || !audioDesbloqueado) return;
       const audio = document.getElementById('sonidoAlarma'); audio.currentTime = 0;
-      let playPromise = audio.play(); if (playPromise !== undefined) playPromise.catch(e => console.log(e));
+      let playPromise = audio.play(); if (playPromise !== undefined) playPromise.catch(e => console.log("Alarma bloqueada", e));
     }
 
-    function abrirModalReceta(nombre) {
+    function avanzarPedido(id) {
+      if (!id) return;
       document.getElementById('loadingOverlay').style.display = 'flex';
-      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => {
-        document.getElementById('loadingOverlay').style.display = 'none'; document.getElementById('tituloReceta').innerText = "📖 " + nombre;
-        let html = `<ul class="divide-y divide-[#495057]">`;
-        if(res.length === 0) html += `<li class="py-3 text-danger text-center">No se encontró receta.</li>`;
-        else res.forEach(r => { html += `<li class="py-3 flex justify-between text-base"><span>${r.ingrediente}</span><strong class="text-acento">${r.cantidad}</strong></li>`; });
-        document.getElementById('contenidoReceta').innerHTML = html + `</ul>`; document.getElementById('modalReceta').style.display = 'flex';
-      }).obtenerRecetaProducto(nombre);
+      google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextKds(); }).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).avanzarTicketCompleto(id);
     }
+    
+    function forzarPedido(id, omitirStr) {
+      if (!id) return; let itemsFaltantes = omitirStr.replace(/,/g, ', ');
+      if (!confirm(`⚠️ Faltan insumos: ${itemsFaltantes}.\n\n¿Forzar preparación sin descontar stock?`)) return;
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextKds(); }).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).avanzarTicketCompleto(id, omitirStr);
+    }
+
+    function abrirModalReceta(nombre) { 
+      document.getElementById('loadingOverlay').style.display = 'flex'; 
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => { 
+        document.getElementById('loadingOverlay').style.display = 'none'; 
+        document.getElementById('tituloReceta').innerText = "📖 " + nombre; 
+        let html = `<ul class="divide-y divide-[#495057]">`; 
+        if(res.length === 0) { html += `<li class="py-3 text-danger text-center">No se encontró receta.</li>`; } 
+        else { res.forEach(r => { html += `<li class="py-3 flex justify-between text-base"><span>${r.ingrediente}</span><strong class="text-acento">${r.cantidad}</strong></li>`; }); } 
+        html += `</ul>`; 
+        document.getElementById('contenidoReceta').innerHTML = html; 
+        document.getElementById('modalReceta').style.display = 'flex'; 
+      }).obtenerRecetaProducto(nombre); 
+    }
+    
     function cerrarModalReceta() { document.getElementById('modalReceta').style.display = 'none'; }
 
-    function cargarSistemaCentral() { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarTickets).obtenerPedidosKDS(); }
+    function scheduleNextKds() {
+        if (!pollingActivoKds) return;
+        let delay = document.hidden ? 15000 : 5000;
+        setTimeout(cargarSistemaCentral, delay);
+    }
+
+    function cargarSistemaCentral() {
+        google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextKds(); }).withSuccessHandler(res => { dibujarTickets(res); scheduleNextKds(); }).obtenerPedidosKDS();
+    }
 
     function dibujarTickets(datos) {
-      const container = document.getElementById('ticketsContainer'); datosKDSGlobal = datos; 
+      const container = document.getElementById('ticketsContainer'); 
       if (!datos || datos.length === 0) { 
-        container.innerHTML = "<div class='w-full flex flex-col items-center justify-center mt-10'><img src='https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34' class='h-48 drop-shadow-xl mb-4'><h3 class='text-gray-500 font-bold text-2xl'>No hay pedidos activos 🍔</h3></div>"; 
+        container.innerHTML = "<div class='w-full flex flex-col items-center justify-center mt-10'><img src='https://humgerimages.carrd.co/assets/images/image10.png?v=9dc15a34' class='h-48 drop-shadow-xl mb-4'><h3 class='text-gray-500 font-bold text-xl'>Sin operaciones en curso ✅</h3></div>"; 
         ticketsConocidos = []; primeraCarga = false; return; 
       }
 
       const noOrdersMsg = container.querySelector('div.w-full'); if(noOrdersMsg) noOrdersMsg.remove();
 
       datos.sort((a, b) => {
-          let aRush = a.tipo.includes('⚡') || (a.notas && a.notas.includes('RUSH ⚡'));
-          let bRush = b.tipo.includes('⚡') || (b.notas && b.notas.includes('RUSH ⚡'));
+          let aRush = a.tipo.includes('⚡') || (a.notas && a.notas.includes('RUSH ⚡')); let bRush = b.tipo.includes('⚡') || (b.notas && b.notas.includes('RUSH ⚡'));
           if (aRush && !bRush) return -1; if (!aRush && bRush) return 1; return 0; 
       });
 
       let idsActuales = datos.map(p => 'ticket-' + p.id); let hayNuevo = false;
       if (!primeraCarga) { for (let idStr of idsActuales) { if (!ticketsConocidos.includes(idStr)) { hayNuevo = true; break; } } }
-      if (hayNuevo && alarmasActivadas) dispararAlarma();
-      ticketsConocidos = idsActuales; primeraCarga = false; 
+      if (hayNuevo && alarmasActivadas) { dispararAlarma(); } ticketsConocidos = idsActuales; primeraCarga = false; 
 
       Array.from(container.children).forEach(child => { if (child.id && !idsActuales.includes(child.id)) container.removeChild(child); });
 
       datos.forEach(p => {
         let isRush = p.tipo.includes('⚡') || (p.notas && p.notas.includes('RUSH ⚡'));
+        let itemsHtml = p.itemsObj.map(item => `<li class="py-1 border-b border-dashed border-gray-300 text-sm font-semibold flex justify-between items-center text-oscuro"><span>${item.nombre} (x${item.cant})</span><button class="text-lg hover:scale-110 transition" onclick="abrirModalReceta('${item.nombre}')">📖</button></li>`).join('');
         
-        let itemsHtml = p.itemsObj.map(item => `
-          <li class="flex justify-between items-center py-2 border-b border-dashed border-gray-300">
-            <span class="font-semibold text-lg text-oscuro">${item.nombre} <span class="text-acento font-bold ml-1">(x${item.cant})</span></span>
-            <button class="bg-gray-200 text-oscuro rounded px-2 py-1 shadow-sm hover:bg-acento hover:text-white transition" onclick="abrirModalReceta('${item.nombre}')">📖</button>
-          </li>
-        `).join('');
-        
-        let borderTop = 'border-blue-500';
-        if (p.est === "POR PAGAR 💰") borderTop = 'border-danger';
-        if (p.est === "EN COCINA 👨‍🍳") borderTop = 'border-yellow-500';
-        
-        let customClass = isRush ? `rush-ticket` : `border-t-8 ${borderTop}`;
+        let botonesFooter = '';
+        if (p.est === "PENDIENTE" && p.bloqueado) {
+            let omitirStr = p.motivosBloqueo.join(',');
+            botonesFooter += `<div class="bg-red-100 text-red-800 p-2 rounded text-xs font-bold text-center border border-red-200 mb-2">⚠️ INVENTARIO INSUFICIENTE:<br><span class="font-normal">${p.motivosBloqueo.join(', ')}</span></div>`;
+            botonesFooter += `<button class="w-full bg-yellow-500 text-oscuro py-3 rounded font-bold shadow" onclick="forzarPedido('${p.id}', '${omitirStr}')">⚠️ Forzar Prep</button>`;
+        } else if (p.est === "PENDIENTE") {
+            botonesFooter += `<button class="w-full bg-blue-600 text-white py-3 rounded font-bold shadow" onclick="avanzarPedido('${p.id}')">COMENZAR 👨‍🍳</button>`;
+        } else if (p.est === "EN COCINA 👨‍🍳") {
+            botonesFooter += `<button class="w-full bg-acento text-white py-3 rounded font-bold shadow font-display tracking-widest" onclick="avanzarPedido('${p.id}')">DESPACHAR ✅</button>`;
+        }
+
+        let ticketClass = 'w-72 bg-white rounded-xl shadow-lg border-t-8 border-blue-500 flex flex-col';
+        if (p.est === "POR PAGAR 💰") ticketClass = 'w-72 bg-white rounded-xl shadow-lg border-t-8 border-danger flex flex-col';
+        if (p.est === "EN COCINA 👨‍🍳") ticketClass = 'w-72 bg-white rounded-xl shadow-lg border-t-8 border-yellow-500 flex flex-col';
+        if (isRush) ticketClass += ' rush-ticket';
+
         let displayTurno = p.id.split('-').length > 2 ? p.id.split('-')[p.id.split('-').length - 2] : p.id.split('-').pop();
 
         let htmlInner = `
-          <div class="bg-[#f1f3f5] p-4 flex justify-between items-center rounded-t-lg border-b border-gray-300">
-            <div class="text-2xl font-display text-[#495057] flex items-center gap-2">#${displayTurno} ${isRush ? '<span class="text-danger text-2xl animate-pulse">⚡</span>' : ''}</div>
-            <div class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-inner ${isRush ? 'bg-danger' : 'bg-[#6c757d]'}">${p.tipo}</div>
+          <div class="bg-gray-100 p-4 border-b border-gray-200 flex justify-between items-center rounded-t-lg">
+            <div class="text-2xl font-display text-oscuro">#${displayTurno} ${isRush ? '⚡' : ''}</div>
+            <div class="text-xs font-bold px-3 py-1 rounded-full bg-gray-500 text-white shadow-inner" style="${isRush ? 'background:#dc3545;' : ''}">${p.tipo}</div>
           </div>
-          <div class="p-5 flex-grow bg-white">
-            <div class="font-bold text-xl text-[#212529] mb-1">👤 ${p.cliente}</div>
-            ${p.celular ? `<div class="text-sm text-[#495057] mb-1">📞 ${p.celular}</div>` : ''}
-            ${p.direccion ? `<div class="text-sm text-[#495057] mb-3">📍 ${p.direccion}</div>` : ''}
-            <ul class="list-none p-0 m-0 mt-3">${itemsHtml}</ul>
-            ${p.notas ? `<div class="bg-[#fff3cd] p-3 rounded border-l-4 border-[#ffc107] mt-4 font-bold text-sm italic text-[#856404]">📝 "${p.notas}"</div>` : ''}
+          <div class="p-4 flex-grow bg-white">
+            <ul class="mb-2">${itemsHtml}</ul>
+            ${p.notas ? `<div class="bg-yellow-50 p-2 rounded text-sm italic border-l-4 border-yellow-400 font-bold mt-3 text-yellow-800">📝 "${p.notas}"</div>` : ''}
           </div>
-          <div class="bg-[#fff3cd] p-3 border-t border-[#ffeeba] flex justify-between items-center text-[#212529]">
-            <div class="font-bold text-lg">Cobrar: <span class="text-danger">$${p.total.toLocaleString()}</span></div>
-            <div class="bg-[#ffc107] px-2 py-1 rounded text-xs font-bold uppercase">${p.metodo_pago}</div>
-          </div>
-          <div class="p-3 font-bold text-center text-lg uppercase tracking-wide
-              ${p.est === 'EN COCINA 👨‍🍳' ? 'bg-yellow-500 text-oscuro' : (p.est === 'POR PAGAR 💰' ? 'bg-danger text-white' : 'bg-gray-600 text-white')}">
-             ${p.est}
+          <div class="p-4 bg-gray-50 border-t border-gray-200 rounded-b-xl flex flex-col gap-0.5">
+            ${botonesFooter}
           </div>
         `;
 
         let existing = document.getElementById('ticket-' + p.id);
-        let hash = p.est + p.itemsObj.length + (p.notas || "") + isRush + JSON.stringify(p.itemsObj);
+        let hash = p.est + p.bloqueado + p.itemsObj.length + (p.notas || "") + isRush + JSON.stringify(p.itemsObj);
         
         if (existing) {
-            if (existing.dataset.hash !== hash) { existing.innerHTML = htmlInner; existing.dataset.hash = hash; existing.className = `w-[320px] bg-white rounded-xl flex flex-col shadow-lg overflow-hidden ${customClass}`; }
+            if (existing.dataset.hash !== hash) { existing.innerHTML = htmlInner; existing.dataset.hash = hash; existing.className = ticketClass; }
         } else {
             let t = document.createElement('div'); t.id = 'ticket-' + p.id;
-            t.className = `w-[320px] bg-white rounded-xl flex flex-col shadow-lg overflow-hidden ${customClass}`;
-            t.dataset.hash = hash; t.innerHTML = htmlInner; container.appendChild(t);
+            t.className = ticketClass; t.dataset.hash = hash; t.innerHTML = htmlInner; container.appendChild(t);
         }
       });
     }
-
-    setInterval(cargarSistemaCentral, 5000);
   </script>
 </body>
 </html>
@@ -182,7 +202,6 @@
       
       if (playPromise !== undefined) {
         playPromise.catch(error => {
-          console.error("Fallo audio externo, iniciando Beep de emergencia:", error);
           const context = new (window.AudioContext || window.webkitAudioContext)();
           const osc = context.createOscillator();
           const gain = context.createGain();
