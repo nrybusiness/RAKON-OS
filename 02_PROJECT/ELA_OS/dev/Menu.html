@@ -207,7 +207,7 @@
     <div class="bg-yellow-50 border border-yellow-300 text-yellow-900 p-4 rounded-xl text-sm mb-6 shadow-sm">
       <h4 class="font-bold mb-2 flex items-center gap-2"><span>ℹ️</span> INFORMACIÓN IMPORTANTE</h4>
       <ul class="list-disc pl-5 space-y-1">
-        <li>Las <strong>2 primeras salsas</strong> son gratis. Las extras cuestan <strong>$500</strong> c/u.</li>
+        <li>Las <strong>2 primeras salsas</strong> son gratis por cada plato principal. Las extras cuestan <strong>$500</strong> c/u.</li>
         <li>Los empaques desechables suman <strong>$2.000</strong> a pedidos para llevar o domicilio.</li>
         <li>La tarifa de domicilio se calcula automáticamente validando la cobertura.</li>
       </ul>
@@ -225,7 +225,7 @@
             <template x-if="item.subItems && item.subItems.length > 0">
               <ul class="pl-4 mt-2 border-l-2 border-gray-200 space-y-1">
                 <template x-for="(sub, sIndex) in item.subItems" :key="sIndex">
-                  <li class="flex justify-between text-sm"><span class="text-gray-600 font-semibold">+ <span x-text="sub.nombre"></span> <span x-show="sub.cant > 1">(x<span x-text="sub.cant"></span>)</span></span><span class="text-gray-400" x-show="sub.precio > 0">+$<span x-text="(sub.precio * sub.cant).toLocaleString()"></span></span></li>
+                  <li class="flex justify-between text-sm"><span class="text-gray-600 font-semibold">+ <span x-text="sub.nombre"></span> <span x-show="sub.cant > 1">(x<span x-text="sub.cant"></span>)</span></span><span class="text-gray-400" x-show="sub.precio > 0">+$<span x-text="(sub.precio * sub.cant * item.cant).toLocaleString()"></span></span></li>
                 </template>
               </ul>
             </template>
@@ -699,16 +699,28 @@
         },
 
         get desglose() {
-          let sub = 0; let sls = 0; let cont = 0;
+          let sub = 0; let sls = 0;
           let emp = ['DOMICILIO', 'PARA LLEVAR'].includes(this.cliente.tipo_pedido) ? 2000 : 0;
           let dom = this.cliente.tipo_pedido === 'DOMICILIO' ? this.tarifaCalculada : 0;
           
-          const procesarPrecio = (item, baseCant) => {
-            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
-              for (let i = 0; i < (item.cant * baseCant); i++) { if (cont >= 2) sls += item.precio; cont++; }
-            } else { sub += (item.precio * item.cant * baseCant); }
-          };
-          this.carrito.forEach(item => { procesarPrecio(item, 1); if (item.subItems) item.subItems.forEach(s => procesarPrecio(s, item.cant)); });
+          this.carrito.forEach(item => { 
+            sub += (item.precio * item.cant);
+            if (item.subItems) {
+                let salsasCont = 0;
+                let salsasGratisPermitidas = 2 * item.cant;
+                item.subItems.forEach(s => {
+                    let esSalsa = s.categoria && s.categoria.toUpperCase() === 'SALSA';
+                    if (esSalsa) {
+                        for(let i = 0; i < (s.cant * item.cant); i++) {
+                            if (salsasCont >= salsasGratisPermitidas) sls += s.precio;
+                            salsasCont++;
+                        }
+                    } else {
+                        sub += (s.precio * s.cant * item.cant);
+                    }
+                });
+            }
+          });
           
           let d = this.descuentoCabra;
           let tot = sub + emp + sls + dom - d;
@@ -724,7 +736,7 @@
           if (this.cliente.tipo_pedido === 'DOMICILIO' && !this.cliente.direccion) return alert("⚠️ Dirección requerida.");
           if (this.errorDireccion && this.cliente.tipo_pedido === 'DOMICILIO') return alert("⚠️ Corrige la dirección antes de continuar.");
           
-          this.enviando = true; let tReserva = this.desglose.total; let payload = []; let contS = 0;
+          this.enviando = true; let tReserva = this.desglose.total; let payload = [];
           let tipoCopia = this.cliente.tipo_pedido;
           let notasEnvio = this.cliente.notas || '';
 
@@ -733,15 +745,27 @@
              notasEnvio = `[💵 LLEVAR CAMBIO DE: $${(this.cliente.paga_con - tReserva).toLocaleString()}]\n` + notasEnvio;
           }
 
-          const aplanar = (item, multi) => {
-            let t = 0;
-            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
-              for (let i=0; i < (item.cant * multi); i++) { if (contS >= 2) t += item.precio; contS++; }
-            } else { t = item.precio * (item.cant * multi); }
-            payload.push({ nombre: item.nombre, cant: (item.cant * multi), precioTotalCalculado: t });
-          };
+          this.carrito.forEach(item => { 
+             payload.push({ nombre: item.nombre, cant: item.cant, precioTotalCalculado: item.precio * item.cant });
+             if (item.subItems && item.subItems.length > 0) {
+                 let salsasCont = 0;
+                 let salsasGratisPermitidas = 2 * item.cant;
+                 item.subItems.forEach(s => {
+                     let esSalsa = s.categoria && s.categoria.toUpperCase() === 'SALSA';
+                     let t = 0;
+                     if (esSalsa) {
+                         for(let i = 0; i < (s.cant * item.cant); i++) {
+                             if (salsasCont >= salsasGratisPermitidas) t += s.precio;
+                             salsasCont++;
+                         }
+                     } else {
+                         t = s.precio * (s.cant * item.cant);
+                     }
+                     payload.push({ nombre: s.nombre, cant: (s.cant * item.cant), precioTotalCalculado: t });
+                 });
+             }
+          });
 
-          this.carrito.forEach(item => { aplanar(item, 1); if (item.subItems) item.subItems.forEach(s => aplanar(s, item.cant)); });
           if (this.cliente.tipo_pedido === 'DOMICILIO') payload.push({ nombre: 'DOMICILIO', cant: 1, precioTotalCalculado: this.desglose.domicilio });
 
           if (this.desglose.descuento > 0) {
