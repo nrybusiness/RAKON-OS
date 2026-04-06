@@ -237,18 +237,6 @@
     let catalogoGlobal = []; let carritoCompras = []; let carritoMermas = []; let menuPOSGlobal = []; let carritoPOS = [];
     let arrPrincipales = []; let arrBebidas = []; let arrExtras = []; let pasoActualPOS = 1;
     let idPedidoEnEdicion = null; let datosKDSGlobal = [];
-    let pollingActivoAdmin = true;
-
-    function scheduleNextAdmin() {
-        if (!pollingActivoAdmin) return;
-        let delay = document.hidden ? 15000 : 5000;
-        setTimeout(cargarSistemaCentral, delay);
-    }
-
-    function cargarSistemaCentral() {
-      google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextAdmin(); }).withSuccessHandler(res => { dibujarTickets(res); scheduleNextAdmin(); }).obtenerPedidosKDS();
-      google.script.run.withFailureHandler(e => { console.log(e); }).withSuccessHandler(dibujarAlertaInventario).obtenerAlertasInventario();
-    }
 
     function errorServidor(e) { document.getElementById('loadingOverlay').style.display = 'none'; alert("❌ Error: " + (e.message || e)); }
 
@@ -463,19 +451,10 @@
     }
 
     function dibujarCarritoPOS() {
-      const tbody = document.getElementById('bodyCarritoPOS'); tbody.innerHTML = ""; let granTotal = 0;
-      let totalPrincipales = carritoPOS.filter(i => ['HAMBURGUESAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'CARNES ASADAS', 'PRINCIPAL'].includes(i.categoria)).reduce((acc, i) => acc + i.cant, 0);
-      let salsasGratisPermitidas = totalPrincipales * 2; let contadorSalsas = 0;
-
+      const tbody = document.getElementById('bodyCarritoPOS'); tbody.innerHTML = ""; let granTotal = 0; let contadorSalsas = 0;
       carritoPOS.forEach((item, idx) => {
         let precioAAplicar = item.precio; let totalFila = 0;
-        if (item.categoria === "SALSA" && !item.precioEditado) { 
-            for(let i = 0; i < item.cant; i++) { 
-                if (contadorSalsas < salsasGratisPermitidas) totalFila += 0; 
-                else totalFila += precioAAplicar; 
-                contadorSalsas++; 
-            } 
-        } else { totalFila = precioAAplicar * item.cant; }
+        if (item.categoria === "SALSA" && !item.precioEditado) { for(let i = 0; i < item.cant; i++) { if (contadorSalsas < 2) totalFila += 0; else totalFila += precioAAplicar; contadorSalsas++; } } else { totalFila = precioAAplicar * item.cant; }
         granTotal += totalFila;
         
         tbody.innerHTML += `
@@ -499,24 +478,15 @@
 
       let tipoF = tipo; if (tipoF === "LOCAL") tipoF = "LOCAL ⚡";
       let datosCliente = { nombre: cliente, celular: celular, tipo_pedido: tipoF, metodo_pago: pago, direccion: dir, notas: notas };
-      
-      let totalPrincipales = carritoPOS.filter(i => ['HAMBURGUESAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'CARNES ASADAS', 'PRINCIPAL'].includes(i.categoria)).reduce((acc, i) => acc + i.cant, 0);
-      let salsasGratisPermitidas = totalPrincipales * 2; let contadorSalsasEnvio = 0;
-
+      let contadorSalsasEnvio = 0;
       let carritoParaEnviar = carritoPOS.map(item => {
           let precioFinalUnidad = item.precio; let totalItem = 0;
-          if (item.categoria === "SALSA" && !item.precioEditado) { 
-              for(let i=0; i<item.cant; i++) { 
-                  if (contadorSalsasEnvio < salsasGratisPermitidas) totalItem += 0; 
-                  else totalItem += precioFinalUnidad; 
-                  contadorSalsasEnvio++; 
-              } 
-          } else { totalItem = precioFinalUnidad * item.cant; }
+          if (item.categoria === "SALSA" && !item.precioEditado) { for(let i=0; i<item.cant; i++) { if (contadorSalsasEnvio < 2) totalItem += 0; else totalItem += precioFinalUnidad; contadorSalsasEnvio++; } } else { totalItem = precioFinalUnidad * item.cant; }
           return { nombre: item.nombre, cant: item.cant, precioTotalCalculado: totalItem };
       });
 
-      if (idPedidoEnEdicion) { google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextAdmin(); }).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).modificarPedidoPOS(idPedidoEnEdicion, datosCliente, JSON.stringify(carritoParaEnviar)); } 
-      else { google.script.run.withFailureHandler(e => { errorServidor(e); scheduleNextAdmin(); }).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).guardarPedidoPOS(datosCliente, JSON.stringify(carritoParaEnviar)); }
+      if (idPedidoEnEdicion) { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).modificarPedidoPOS(idPedidoEnEdicion, datosCliente, JSON.stringify(carritoParaEnviar)); } 
+      else { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).guardarPedidoPOS(datosCliente, JSON.stringify(carritoParaEnviar)); }
     }
 
     function confirmarCierre() { if(!confirm("¿Estás seguro de realizar el Cierre de Turno?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; google.script.run.withFailureHandler(errorServidor).withSuccessHandler((resumen) => { document.getElementById('loadingOverlay').style.display = 'none'; mostrarModalCierre(resumen); cargarSistemaCentral(); }).ejecutarCierreTurnoKDS(); }
@@ -544,6 +514,11 @@
     function eliminarDelCarrito(index) { carritoCompras.splice(index, 1); dibujarCarrito(); }
     function dibujarCarrito() { const tbody = document.getElementById('bodyCarrito'); tbody.innerHTML = ""; let granTotal = 0; carritoCompras.forEach((item, idx) => { granTotal += item.costoTotal; tbody.innerHTML += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-right text-gray-600 font-bold">$${item.costoTotal.toLocaleString()}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarDelCarrito(${idx})">X</button></td></tr>`; }); document.getElementById('totalCarritoTexto').innerText = granTotal.toLocaleString(); }
     function enviarLoteCompras() { if (carritoCompras.length === 0) return; if(!confirm("¿Registrar compras?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; cerrarModalCompras(); google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; carritoCompras = []; dibujarCarrito(); cargarSistemaCentral(); alert("✅ Compras ingresadas."); }).doPost({ parameter: { accion: "guardar_compras_lote", compras_data: JSON.stringify(carritoCompras) } }); }
+
+    function cargarSistemaCentral() {
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarTickets).obtenerPedidosKDS();
+      google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarAlertaInventario).obtenerAlertasInventario();
+    }
 
     function dibujarAlertaInventario(alertas) {
       const divAlerta = document.getElementById('alertaInventario');
@@ -639,6 +614,7 @@
       });
     }
 
+    setInterval(cargarSistemaCentral, 5000);
   </script>
 </body>
 </html>
