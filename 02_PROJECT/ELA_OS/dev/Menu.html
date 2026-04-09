@@ -18,48 +18,52 @@
     @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scroll-hide::-webkit-scrollbar { display: none; }
     .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    [x-cloak] { display: none !important; }
+    .congelar-btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #a71d2a !important; }
   </style>
 </head>
-<body x-data="menuApp()" x-init="init()" class="antialiased pb-24 relative" :class="{'overflow-hidden': modalPersonalizar || modalBebida || modalConfirmacion || mostrarUpsell || mostrarTutorial || modalDado || modalCabra || dispositivoBloqueado}">
+<body x-data="menuApp()" x-init="init()" class="antialiased pb-24 relative" :class="{'overflow-hidden': modalPersonalizar || modalBebida || modalConfirmacion || mostrarUpsell || mostrarTutorial || modalDado || modalCabra || dispositivoBloqueado || subastaVisible}">
 
-  <div x-show="dispositivoBloqueado" style="display: none;" class="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-black p-6 text-center">
+  <audio id="audioCabra" preload="auto"><source src="https://www.myinstants.com/media/sounds/goat-bleats.mp3" type="audio/mpeg"></audio>
+
+  <div x-cloak x-show="dispositivoBloqueado" class="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-black p-6 text-center">
     <div class="text-6xl mb-4">🛑</div>
     <h1 class="text-4xl font-display text-danger mb-4 tracking-widest">ACCESO DENEGADO</h1>
     <p class="text-gray-300 font-bold text-lg mb-6">Este dispositivo ha sido restringido por violaciones de seguridad a la infraestructura de ELA_OS.</p>
     <p class="text-gray-500 text-xs font-mono">ID de Incidente: <span x-text="uid"></span></p>
   </div>
 
-  <div x-show="!tiendaAbierta" class="bg-danger text-white text-center py-2 px-4 text-sm font-bold tracking-widest sticky top-0 z-50 shadow-md">
+  <div x-cloak x-show="!tiendaAbierta" class="bg-danger text-white text-center py-2 px-4 text-sm font-bold tracking-widest sticky top-0 z-50 shadow-md">
     ⚠️ RESTAURANTE CERRADO - ABRIMOS DE 5:00 PM A 1:00 AM ⚠️
   </div>
-  <div x-show="tiendaAbierta && !cargando" class="bg-oscuro text-acento text-center py-1.5 px-4 text-xs font-bold tracking-widest sticky top-0 z-50 shadow-md border-b border-[#624735]">
+  <div x-cloak x-show="tiendaAbierta && !cargando" class="bg-oscuro text-acento text-center py-1.5 px-4 text-xs font-bold tracking-widest sticky top-0 z-50 shadow-md border-b border-[#624735]">
     ⏳ TIEMPO DE PREPARACIÓN ACTUAL: ~<span x-text="eta"></span> MINUTOS
   </div>
 
   <div x-show="vista === 'catalogo' && !dispositivoBloqueado" x-transition.opacity>
     <header class="bg-oscuro text-base py-12 px-4 text-center shadow-md relative overflow-hidden">
       <div class="relative z-10 flex flex-col items-center">
-        <img src="https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34" alt="Mascota Saludo" class="h-40 object-contain drop-shadow-2xl mb-4">
-        <h1 @click="adminClicks++; if(adminClicks >= 5) { adminClicks = 0; invocarCabraSegura(); }" class="text-4xl md:text-5xl tracking-wide mb-2 text-acento select-none cursor-default">HUNGER BURGERS</h1>
-        <p class="text-md md:text-lg font-semibold tracking-widest opacity-90 mb-6">¿LISTO PARA EL PRIMER MORDISCO?</p>
+        <img @click="adminClicks++; if(adminClicks >= 5) { adminClicks = 0; invocarCabraSegura(); }" src="https://humgerimages.carrd.co/assets/images/image06.png?v=9dc15a34" alt="Mascota Saludo" class="h-40 object-contain drop-shadow-2xl mb-4 cursor-pointer">
+        <h1 @click="adminClicks++; if(adminClicks >= 5) { adminClicks = 0; invocarCabraSegura(); }" class="text-4xl md:text-5xl tracking-wide mb-2 text-acento select-none cursor-pointer">HUNGER BURGERS</h1>
+        <p class="text-md md:text-lg font-semibold tracking-widest opacity-90 mb-6 uppercase">La subasta del sabor ha comenzado</p>
         <div class="flex justify-center gap-4">
           <button @click="vista = 'rastreo'; window.scrollTo(0,0);" class="bg-acento text-white px-6 py-2 rounded-md font-display tracking-wide shadow-lg hover:bg-yellow-600 transition border-2 border-acento">RASTREAR ORDEN</button>
         </div>
       </div>
     </header>
 
-    <div x-show="cargando" class="flex flex-col justify-center items-center py-20">
+    <div x-cloak x-show="cargando" class="flex flex-col justify-center items-center py-20">
       <img src="https://humgerimages.carrd.co/assets/images/image18.png?v=9dc15a34" alt="Cargando Menu" class="h-32 object-contain animate-pulse mb-6 drop-shadow-lg">
       <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
     </div>
 
-    <nav x-show="!cargando" class="sticky z-40 bg-base border-b-2 border-acento shadow-md py-3 px-4 flex gap-3 overflow-x-auto scroll-hide w-full" :class="tiendaAbierta ? 'top-[28px]' : 'top-9'">
+    <nav x-cloak x-show="!cargando" class="sticky z-40 bg-base border-b-2 border-acento shadow-md py-3 px-4 flex gap-3 overflow-x-auto scroll-hide w-full" :class="tiendaAbierta ? 'top-[28px]' : 'top-9'">
       <template x-for="cat in categoriasUnicas" :key="cat">
         <button @click="scrollToCat(cat)" class="bg-oscuro text-white px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow hover:bg-acento transition" x-text="cat"></button>
       </template>
     </nav>
 
-    <main id="catalogo-grid" class="p-4 max-w-5xl mx-auto mt-4" x-show="!cargando">
+    <main id="catalogo-grid" class="p-4 max-w-5xl mx-auto mt-4" x-cloak x-show="!cargando">
       <template x-for="(cat, index) in categoriasUnicas" :key="index">
         <div class="mb-12 pt-4" :id="'cat-' + cat.replace(/\s+/g, '-').toUpperCase()">
           <h2 class="text-3xl font-display mb-4 border-b-4 border-oscuro pb-2 uppercase" x-text="cat"></h2>
@@ -81,7 +85,7 @@
     </main>
   </div>
 
-  <div x-show="mostrarTutorial" style="display: none;" class="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
+  <div x-cloak x-show="mostrarTutorial" class="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
     <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento relative">
       <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2">¡BIENVENIDO! 🍔</h3>
       <div x-show="pasoTutorial === 1">
@@ -99,7 +103,7 @@
     </div>
   </div>
 
-  <div x-show="modalDado" style="display: none;" class="fixed inset-0 z-[150] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
+  <div x-cloak x-show="modalDado" class="fixed inset-0 z-[150] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
     <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-oscuro relative overflow-hidden">
       <h3 class="text-2xl font-display text-oscuro mb-2">¡EL DADO HA HABLADO! 🎲</h3>
       <p class="text-sm font-bold text-gray-600 mb-6">Hemos armado este combo perfecto para ti:</p>
@@ -126,9 +130,8 @@
     </div>
   </div>
 
-  <div x-show="modalPersonalizar" style="display: none;" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black bg-opacity-80 sm:p-4" x-transition.opacity @click.self="modalPersonalizar = false">
+  <div x-cloak x-show="modalPersonalizar" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black bg-opacity-80 sm:p-4" x-transition.opacity @click.self="modalPersonalizar = false">
     <div class="bg-gray-100 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-      
       <div class="p-5 border-b border-[#e5d4a5] flex justify-between items-center bg-oscuro text-base relative">
         <div class="flex-1 text-center">
             <h2 class="text-2xl font-display leading-tight">PERSONALIZAR</h2>
@@ -138,12 +141,30 @@
       </div>
 
       <div class="flex bg-white border-b border-[#e5d4a5]">
-        <button @click="tabPersonalizar = 'ADICIONES'" :class="tabPersonalizar === 'ADICIONES' ? 'bg-gray-100 text-oscuro border-b-4 border-acento' : 'text-gray-400 border-b-4 border-transparent hover:bg-gray-50'" class="flex-1 py-4 font-bold text-sm uppercase transition-all tracking-wider">🍔 ADICIONES</button>
         <button @click="tabPersonalizar = 'SALSAS'" :class="tabPersonalizar === 'SALSAS' ? 'bg-gray-100 text-oscuro border-b-4 border-acento' : 'text-gray-400 border-b-4 border-transparent hover:bg-gray-50'" class="flex-1 py-4 font-bold text-sm uppercase transition-all tracking-wider">🥫 SALSAS</button>
+        <button @click="tabPersonalizar = 'ADICIONES'" :class="tabPersonalizar === 'ADICIONES' ? 'bg-gray-100 text-oscuro border-b-4 border-acento' : 'text-gray-400 border-b-4 border-transparent hover:bg-gray-50'" class="flex-1 py-4 font-bold text-sm uppercase transition-all tracking-wider">🍔 ADICIONES</button>
       </div>
 
       <div class="p-4 overflow-y-auto scroll-hide flex-grow bg-gray-100 relative">
-        <div x-show="tabPersonalizar === 'ADICIONES'" class="space-y-3" x-transition>
+        <div x-show="tabPersonalizar === 'SALSAS'" class="space-y-3" x-transition>
+          <p class="text-xs text-gray-500 mb-4 font-bold tracking-wide uppercase text-center bg-gray-200 py-2 rounded-lg">ℹ️ 3 Salsas gratis por plato. Extras a $500 c/u.</p>
+          <template x-for="sls in salsasDisponibles" :key="sls.nombre">
+            <label class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center cursor-pointer hover:bg-yellow-50 transition">
+              <div class="flex-1 flex justify-between items-center pr-4">
+                  <p class="font-bold text-oscuro text-lg select-none" x-text="sls.nombre"></p>
+                  <p class="text-sm font-bold" :class="obtenerPrecioDinamicoSalsa(sls) === 0 ? 'text-green-600' : 'text-acento'" x-show="sls.precio > 0">
+                     <span x-show="obtenerPrecioDinamicoSalsa(sls) === 0">¡Gratis!</span>
+                     <span x-show="obtenerPrecioDinamicoSalsa(sls) > 0">+$<span x-text="obtenerPrecioDinamicoSalsa(sls).toLocaleString()"></span></span>
+                  </p>
+              </div>
+              <div class="flex items-center">
+                  <input type="checkbox" class="w-7 h-7 text-acento border-gray-300 rounded focus:ring-acento cursor-pointer accent-[#C78D2B]" :checked="obtenerCantSubItem(sls) > 0" @change="toggleSubItem(sls, $event.target.checked)">
+              </div>
+            </label>
+          </template>
+        </div>
+
+        <div x-cloak x-show="tabPersonalizar === 'ADICIONES'" class="space-y-3" x-transition>
           <template x-for="adc in adicionesDisponibles" :key="adc.nombre">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
               <div class="flex-1">
@@ -158,22 +179,6 @@
             </div>
           </template>
         </div>
-
-        <div x-show="tabPersonalizar === 'SALSAS'" class="space-y-3" style="display: none;" x-transition>
-          <p class="text-xs text-gray-500 mb-4 font-bold tracking-wide uppercase text-center bg-gray-200 py-2 rounded-lg">ℹ️ 2 Salsas gratis. Extras a $500 c/u.</p>
-          <template x-for="sls in salsasDisponibles" :key="sls.nombre">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
-              <div class="flex-1">
-                  <p class="font-bold text-oscuro text-lg" x-text="sls.nombre"></p>
-              </div>
-              <div class="flex items-center gap-3">
-                  <button @click="ajustarSubItem(sls, -1)" class="bg-gray-200 text-oscuro w-10 h-10 rounded-lg font-bold hover:bg-gray-300 transition text-2xl flex items-center justify-center shadow-inner">-</button>
-                  <span class="font-bold w-4 text-center text-xl" x-text="obtenerCantSubItem(sls)"></span>
-                  <button @click="ajustarSubItem(sls, 1)" class="bg-acento text-white w-10 h-10 rounded-lg font-bold hover:bg-yellow-600 transition text-2xl flex items-center justify-center shadow-md">+</button>
-              </div>
-            </div>
-          </template>
-        </div>
       </div>
 
       <div class="p-5 bg-white border-t border-[#e5d4a5] sm:rounded-b-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
@@ -182,7 +187,7 @@
     </div>
   </div>
 
-  <div x-show="modalBebida" style="display: none;" class="fixed inset-0 z-[105] flex items-center justify-center bg-black bg-opacity-75 p-4" x-transition @click.self="modalBebida = false">
+  <div x-cloak x-show="modalBebida" class="fixed inset-0 z-[105] flex items-center justify-center bg-black bg-opacity-75 p-4" x-transition @click.self="modalBebida = false">
     <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento relative">
       <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2" x-text="bebidaActiva?.nombre"></h3>
       <div x-show="bebidaRequiereBase && bebidaBase === ''" class="flex flex-col gap-3">
@@ -200,15 +205,44 @@
     </div>
   </div>
 
-  <div x-show="vista === 'checkout' && !dispositivoBloqueado" x-transition.opacity class="p-4 max-w-2xl mx-auto pt-8">
+  <div x-cloak x-show="mostrarUpsell" class="fixed inset-0 z-[115] flex items-center justify-center bg-black bg-opacity-75 p-4" @click.self="mostrarUpsell = false">
+    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento flex flex-col max-h-[90vh]">
+      <div x-show="upsellFase === 1">
+        <h3 class="text-2xl font-display text-oscuro mb-2">¡Espera! 🍟</h3>
+        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'COMBO'">¿Te gustaría añadir <strong>Combo de Papas</strong> por solo <strong>$4.000</strong>?</p>
+        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'BEBIDA'">¿Te gustaría acompañar tu plato con <strong>una Bebida Refrescante</strong>?</p>
+        <div class="flex gap-4">
+          <button @click="mostrarUpsell = false" class="flex-1 bg-gray-300 text-oscuro py-3 rounded-lg font-bold hover:bg-gray-400">No, gracias</button>
+          <button @click="aceptarUpsell" class="flex-1 bg-acento text-white py-3 rounded-lg font-bold hover:bg-yellow-600 shadow-md">
+            <span x-show="upsellRecomendado.tipo === 'COMBO'">¡Sí, añadir!</span>
+            <span x-show="upsellRecomendado.tipo === 'BEBIDA'">¡Sí, elegir!</span>
+          </button>
+        </div>
+      </div>
+      <div x-show="upsellFase === 2" class="flex flex-col h-full">
+        <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2">Elige tu bebida 🥤</h3>
+        <div class="overflow-y-auto scroll-hide flex-grow mb-4 space-y-2">
+           <template x-for="bebida in menuFiltrado('BEBIDAS')" :key="bebida.nombre">
+              <button @click="agregarBebidaUpsell(bebida)" class="w-full bg-white border-2 border-[#e5d4a5] text-oscuro py-3 px-4 rounded-lg font-bold shadow-sm hover:bg-gray-100 flex justify-between items-center transition">
+                 <span x-text="bebida.nombre" class="text-left text-sm"></span>
+                 <span class="text-acento font-bold">+$<span x-text="bebida.precio.toLocaleString()"></span></span>
+              </button>
+           </template>
+        </div>
+        <button @click="mostrarUpsell = false" class="text-gray-600 py-2 font-bold underline hover:text-oscuro">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div x-cloak x-show="vista === 'checkout' && !dispositivoBloqueado" x-transition.opacity class="p-4 max-w-2xl mx-auto pt-8">
     <button @click="vista = 'catalogo'; window.scrollTo(0,0);" class="text-oscuro font-bold mb-4 flex items-center gap-2 hover:text-acento transition"><span>⬅️</span> Volver al Menú</button>
     <h2 class="text-3xl font-display mb-6">TU ORDEN</h2>
 
     <div class="bg-yellow-50 border border-yellow-300 text-yellow-900 p-4 rounded-xl text-sm mb-6 shadow-sm">
       <h4 class="font-bold mb-2 flex items-center gap-2"><span>ℹ️</span> INFORMACIÓN IMPORTANTE</h4>
       <ul class="list-disc pl-5 space-y-1">
-        <li>Las <strong>2 primeras salsas</strong> son gratis. Las extras cuestan <strong>$500</strong> c/u.</li>
-        <li>Los empaques desechables suman <strong>$2.000</strong> a pedidos para llevar o domicilio.</li>
+        <li>Las <strong>3 primeras salsas</strong> de tus platos principales son gratis. Las extras cuestan <strong>$500</strong> c/u.</li>
+        <li>Los empaques desechables suman <strong>$1.000 por plato</strong> a pedidos para llevar o domicilio.</li>
         <li>La tarifa de domicilio se calcula automáticamente validando la cobertura.</li>
       </ul>
     </div>
@@ -225,7 +259,10 @@
             <template x-if="item.subItems && item.subItems.length > 0">
               <ul class="pl-4 mt-2 border-l-2 border-gray-200 space-y-1">
                 <template x-for="(sub, sIndex) in item.subItems" :key="sIndex">
-                  <li class="flex justify-between text-sm"><span class="text-gray-600 font-semibold">+ <span x-text="sub.nombre"></span> <span x-show="sub.cant > 1">(x<span x-text="sub.cant"></span>)</span></span><span class="text-gray-400" x-show="sub.precio > 0">+$<span x-text="(sub.precio * sub.cant).toLocaleString()"></span></span></li>
+                  <li class="flex justify-between text-sm">
+                      <span class="text-gray-600 font-semibold">+ <span x-text="sub.nombre"></span> <span x-show="sub.cant > 1">(x<span x-text="sub.cant"></span>)</span></span>
+                      <span class="text-gray-400" x-show="sub.precio >= 0">+$<span x-text="(sub.precio * sub.cant).toLocaleString()"></span></span>
+                  </li>
                 </template>
               </ul>
             </template>
@@ -275,12 +312,17 @@
       <div><label class="block text-sm font-bold mb-1">Notas a cocina</label><textarea x-model="cliente.notas" rows="2" class="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:border-acento"></textarea></div>
     </div>
 
-    <div class="bg-oscuro text-base rounded-xl p-5 shadow-lg">
+    <div class="bg-oscuro text-base rounded-xl p-5 shadow-lg relative">
       <div class="flex justify-between mb-2 text-sm"><span>Subtotal (Comida)</span><span>$<span x-text="desglose.subtotal.toLocaleString()"></span></span></div>
       <div class="flex justify-between mb-2 text-sm" x-show="desglose.empaque > 0"><span>Empaque Desechables</span><span>$<span x-text="desglose.empaque.toLocaleString()"></span></span></div>
       <div class="flex justify-between mb-2 text-sm" x-show="desglose.salsas > 0"><span>Salsas Extra</span><span>$<span x-text="desglose.salsas.toLocaleString()"></span></span></div>
       <div class="flex justify-between mb-2 text-sm" x-show="desglose.domicilio > 0"><span>Valor Domicilio</span><span>$<span x-text="desglose.domicilio.toLocaleString()"></span></span></div>
-      <div class="flex justify-between mb-4 text-sm text-green-500 font-bold tracking-wider" x-show="desglose.descuento > 0"><span>🎁 CABRA DE ORO</span><span>-$<span x-text="desglose.descuento.toLocaleString()"></span></span></div>
+      
+      <div class="flex justify-between mb-4 text-sm text-green-500 font-bold tracking-wider" x-show="desglose.descuento > 0">
+          <span>🎁 DESCUENTO DE LA CABRA</span>
+          <span>-$<span x-text="desglose.descuento.toLocaleString()"></span></span>
+      </div>
+
       <div class="flex justify-between font-display text-2xl border-t border-[#624735] pt-4 mb-6 text-acento"><span>TOTAL</span><span>$<span x-text="desglose.total.toLocaleString()"></span></span></div>
       <button @click="enviar" :disabled="enviando || calculandoTarifa || errorDireccion || carrito.length === 0 || !tiendaAbierta" class="w-full bg-acento text-white font-display text-xl py-4 rounded-md shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex justify-center gap-2">
         <span x-show="!enviando">CONFIRMAR ORDEN 🚀</span><span x-show="enviando" class="loader ease-linear rounded-full border-2 border-t-2 border-white h-6 w-6"></span>
@@ -288,7 +330,7 @@
     </div>
   </div>
 
-  <div x-show="vista === 'rastreo' && !dispositivoBloqueado" class="p-4 max-w-xl mx-auto pt-12 text-center" style="display:none;">
+  <div x-cloak x-show="vista === 'rastreo' && !dispositivoBloqueado" class="p-4 max-w-xl mx-auto pt-12 text-center" style="display:none;">
     <button @click="detenerRastreo()" class="text-oscuro font-bold mb-8 flex items-center gap-2 hover:text-acento transition mx-auto"><span>⬅️</span> Volver al Menú</button>
     <h2 class="text-3xl font-display mb-6">RASTREAR ORDEN</h2>
     
@@ -322,7 +364,7 @@
     <div x-show="errorRastreo" class="bg-red-100 text-red-700 p-4 rounded-xl font-bold mt-4">Orden no encontrada. Revisa tu turno.</div>
   </div>
 
-  <div x-show="modalConfirmacion" style="display: none;" class="fixed inset-0 z-[120] flex items-center justify-center bg-black bg-opacity-80 p-4">
+  <div x-cloak x-show="modalConfirmacion" class="fixed inset-0 z-[120] flex items-center justify-center bg-black bg-opacity-80 p-4">
     <div class="bg-base rounded-2xl max-w-md w-full p-8 text-center shadow-2xl border-4 border-oscuro relative">
       <h2 class="text-3xl font-display text-oscuro mb-2">¡ORDEN RECIBIDA!</h2>
       <p class="text-lg font-bold text-oscuro mb-4">Tu número de turno es:</p>
@@ -336,56 +378,54 @@
     </div>
   </div>
 
-  <div x-show="mostrarUpsell" style="display: none;" class="fixed inset-0 z-[115] flex items-center justify-center bg-black bg-opacity-75 p-4" @click.self="mostrarUpsell = false">
-    <div class="bg-base rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-acento flex flex-col max-h-[90vh]">
-      
-      <div x-show="upsellFase === 1">
-        <h3 class="text-2xl font-display text-oscuro mb-2">¡Espera! 🍟</h3>
-        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'COMBO'">¿Te gustaría añadir <strong>Combo de Papas</strong> por solo <strong>$4.000</strong>?</p>
-        <p class="text-lg font-bold text-oscuro mb-6" x-show="upsellRecomendado.tipo === 'BEBIDA'">¿Te gustaría acompañar tu plato con <strong>una Bebida Refrescante</strong>?</p>
-        <div class="flex gap-4">
-          <button @click="mostrarUpsell = false" class="flex-1 bg-gray-300 text-oscuro py-3 rounded-lg font-bold hover:bg-gray-400">No, gracias</button>
-          <button @click="aceptarUpsell" class="flex-1 bg-acento text-white py-3 rounded-lg font-bold hover:bg-yellow-600 shadow-md">
-            <span x-show="upsellRecomendado.tipo === 'COMBO'">¡Sí, añadir!</span>
-            <span x-show="upsellRecomendado.tipo === 'BEBIDA'">¡Sí, elegir!</span>
-          </button>
-        </div>
-      </div>
-
-      <div x-show="upsellFase === 2" class="flex flex-col h-full">
-        <h3 class="text-2xl font-display text-oscuro mb-4 border-b border-oscuro pb-2">Elige tu bebida 🥤</h3>
-        <div class="overflow-y-auto scroll-hide flex-grow mb-4 space-y-2">
-           <template x-for="bebida in menuFiltrado('BEBIDAS')" :key="bebida.nombre">
-              <button @click="agregarBebidaUpsell(bebida)" class="w-full bg-white border-2 border-[#e5d4a5] text-oscuro py-3 px-4 rounded-lg font-bold shadow-sm hover:bg-gray-100 flex justify-between items-center transition">
-                 <span x-text="bebida.nombre" class="text-left text-sm"></span>
-                 <span class="text-acento font-bold">+$<span x-text="bebida.precio.toLocaleString()"></span></span>
-              </button>
-           </template>
-        </div>
-        <button @click="mostrarUpsell = false" class="text-gray-600 py-2 font-bold underline hover:text-oscuro">Cancelar</button>
-      </div>
-
-    </div>
-  </div>
-
   <img x-show="cabraActiva" src="https://humgerimages.carrd.co/assets/images/image58.png?v=7cabd22c" @click="atraparCabra()" class="fixed z-[300] cursor-pointer hover:scale-110 transition-transform drop-shadow-2xl" :style="`top: ${cabraTop}; left: ${cabraLeft}; width: 90px; height: 90px;`" style="display:none;">
 
-  <div x-show="modalCabra" style="display: none;" class="fixed inset-0 z-[350] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
+  <div x-cloak x-show="modalCabra" class="fixed inset-0 z-[350] flex items-center justify-center bg-black bg-opacity-80 p-4" x-transition>
     <div class="bg-base rounded-2xl max-w-sm w-full p-8 text-center shadow-2xl border-4 border-acento relative">
         <div class="text-6xl mb-4 animate-bounce">🐐✨</div>
         <h2 class="text-3xl font-display text-oscuro mb-2">¡LO LOGRASTE!</h2>
         <p class="text-lg font-bold text-oscuro mb-4">Atrapaste a la Cabra de Oro.</p>
-        <div class="text-5xl font-display text-green-600 mb-6 drop-shadow-sm">-$5.000</div>
+        <div class="text-5xl font-display text-green-600 mb-6 drop-shadow-sm">+$5.000 COP</div>
         <p class="text-sm font-bold text-gray-700 mb-6">El descuento será aplicado automáticamente a tu orden actual.</p>
         <button @click="modalCabra = false" class="bg-oscuro text-white w-full py-4 rounded-lg font-bold font-display text-xl shadow-lg hover:bg-gray-800 transition tracking-widest">¡GENIAL!</button>
     </div>
   </div>
 
-  <button @click="seleccionarAlAzar()" x-show="vista === 'catalogo' && !cargando && tiendaAbierta && !modalConfirmacion && !mostrarUpsell && !modalPersonalizar && !modalBebida && !mostrarTutorial && !modalDado && !dispositivoBloqueado" class="fixed bottom-6 left-6 bg-acento text-white w-14 h-14 rounded-full shadow-2xl font-bold text-3xl flex items-center justify-center z-50 border-2 border-oscuro hover:scale-110 transition animate-bounce">
+  <div x-cloak x-show="subastaVisible" class="fixed inset-0 z-[400] flex items-center justify-center bg-black bg-opacity-90 p-4" x-transition>
+    <div class="bg-base rounded-3xl max-w-md w-full p-8 text-center shadow-2xl border-4 border-acento relative overflow-hidden">
+      <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
+
+      <div x-show="!cabraHuyo">
+        <h2 class="text-3xl font-display text-danger mb-2 animate-pulse">¡LA CABRA ESTÁ DE BUENAS! 🐐</h2>
+        <p class="text-sm font-bold text-oscuro mb-4">El precio de tu pedido está BAJANDO cada 5 segundos... pero si la cabra se aburre, ¡huye y pierdes todo el descuento!</p>
+
+        <img src="https://humgerimages.carrd.co/assets/images/image20.jpg?v=2a4b2325" alt="Cabra Codiciosa" class="h-40 mx-auto drop-shadow-2xl mb-4 hover:scale-105 transition-transform">
+
+        <div class="bg-white rounded-2xl p-4 shadow-inner mb-6 border-2 border-[#e5d4a5]">
+            <p class="text-gray-500 font-bold text-sm mb-1 uppercase tracking-widest">Precio Congelado:</p>
+            <p class="text-5xl font-display text-green-600 drop-shadow-sm transition-all duration-300">$<span x-text="(desglose.total - descuentoSubasta).toLocaleString()"></span></p>
+            <p class="text-sm font-bold text-danger mt-2" x-show="descuentoSubasta > 0">¡Has ahorrado $<span x-text="descuentoSubasta.toLocaleString()"></span>!</p>
+        </div>
+
+        <button @click="congelarPrecio()" class="congelar-btn w-full bg-danger text-white py-5 rounded-xl font-bold font-display text-2xl shadow-[0_8px_0_#a71d2a] hover:bg-red-600 transition-all cursor-pointer">
+            ❄️ ¡CONGELAR PRECIO!
+        </button>
+      </div>
+
+      <div x-show="cabraHuyo" style="display:none;" x-transition>
+        <div class="text-7xl mb-4 animate-bounce">💨🐐</div>
+        <h2 class="text-4xl font-display text-oscuro mb-2">¡BEEEEEE!</h2>
+        <p class="text-xl font-bold text-danger mb-4">La cabra se aburrió y se largó con tu descuento.</p>
+        <p class="text-sm font-bold text-gray-600">Volviendo a tu carrito de compras...</p>
+      </div>
+    </div>
+  </div>
+
+  <button @click="seleccionarAlAzar()" x-cloak x-show="vista === 'catalogo' && !cargando && tiendaAbierta && !modalConfirmacion && !mostrarUpsell && !modalPersonalizar && !modalBebida && !mostrarTutorial && !modalDado && !dispositivoBloqueado" class="fixed bottom-6 left-6 bg-acento text-white w-14 h-14 rounded-full shadow-2xl font-bold text-3xl flex items-center justify-center z-50 border-2 border-oscuro hover:scale-110 transition animate-bounce">
     🎲
   </button>
 
-  <button @click="vista = 'checkout'; window.scrollTo(0,0);" x-show="vista === 'catalogo' && carrito.length > 0 && !modalConfirmacion && !mostrarUpsell && !modalPersonalizar && !modalBebida && !mostrarTutorial && !modalDado && !modalCabra && !dispositivoBloqueado" class="fixed bottom-6 right-6 bg-oscuro text-white px-6 py-4 rounded-full shadow-2xl font-bold font-display text-lg flex items-center gap-3 z-50 border-2 border-acento hover:scale-105 transition">
+  <button @click="vista = 'checkout'; window.scrollTo(0,0);" x-cloak x-show="vista === 'catalogo' && carrito.length > 0 && !modalConfirmacion && !mostrarUpsell && !modalPersonalizar && !modalBebida && !mostrarTutorial && !modalDado && !modalCabra && !dispositivoBloqueado" class="fixed bottom-6 right-6 bg-oscuro text-white px-6 py-4 rounded-full shadow-2xl font-bold font-display text-lg flex items-center gap-3 z-50 border-2 border-acento hover:scale-105 transition">
     <span>🛒</span><span class="bg-danger px-2 py-0.5 rounded-full text-sm" x-text="totalItemsCarrito"></span>
     <span>$<span x-text="desglose.total.toLocaleString()"></span></span>
   </button>
@@ -402,7 +442,7 @@
         modalConfirmacion: false, ticketConfirmado: '', totalConfirmado: 0,
         mostrarUpsell: false, upsellFase: 1, upsellRecomendado: { tipo: '' }, 
         
-        modalPersonalizar: false, tabPersonalizar: 'ADICIONES', platoActivo: null, subItemsActivos: [], 
+        modalPersonalizar: false, tabPersonalizar: 'SALSAS', platoActivo: null, subItemsActivos: [], 
         modalBebida: false, bebidaActiva: null, bebidaRequiereBase: false, bebidaBase: '',
         calculandoTarifa: false, errorDireccion: null, tarifaCalculada: 0,
         
@@ -412,8 +452,14 @@
         comboDado: { principal: null, bebida: null, papas: null, precioTotal: 0 },
         evitarUpsellDado: false,
         
+        promosActivas: { subasta: true, cabra: true },
+        estampidaAtrapada: false,
+        
         cabraActiva: false, cabraTop: '0px', cabraLeft: '0px', descuentoCabra: 0, modalCabra: false,
         adminClicks: 0,
+        
+        subastaVisible: false, subastaActiva: false, descuentoSubasta: 0, subastaJugada: false,
+        temporizadorCheckout: null, intervaloCaida: null, timeoutEscape: null, cabraHuyo: false,
         
         uid: '',
         dispositivoBloqueado: false,
@@ -441,6 +487,16 @@
           this.$watch('carrito', val => localStorage.setItem('rakon_cart', JSON.stringify(val)));
           this.$watch('cliente', val => localStorage.setItem('rakon_cliente', JSON.stringify(val)));
 
+          this.$watch('vista', val => {
+              if (val === 'checkout' && this.promosActivas.subasta && !this.subastaJugada && this.carrito.length > 0 && this.desglose.total >= 5000) {
+                  this.temporizadorCheckout = setTimeout(() => {
+                      this.iniciarSubasta();
+                  }, 20000); 
+              } else {
+                  if (this.temporizadorCheckout) clearTimeout(this.temporizadorCheckout);
+              }
+          });
+
           let tutVisto = localStorage.getItem('rakon_tutorial');
           if (!tutVisto) { setTimeout(() => { this.mostrarTutorial = true; }, 1000); }
 
@@ -451,6 +507,26 @@
                     this.cargando = false;
                     return;
                 }
+                
+                google.script.run.withSuccessHandler(cfg => {
+                    this.promosActivas.subasta = cfg.subastaActiva;
+                    this.promosActivas.cabra = cfg.cabraActiva;
+                    if (cfg.estampidaGlobal && !this.estampidaAtrapada) this.invocarCabraSegura();
+                }).obtenerConfigPromos();
+
+                setInterval(() => {
+                    if(!this.tiendaAbierta) return;
+                    google.script.run.withSuccessHandler(cfg => {
+                        this.promosActivas.subasta = cfg.subastaActiva;
+                        this.promosActivas.cabra = cfg.cabraActiva;
+                        if (cfg.estampidaGlobal && !this.estampidaAtrapada && this.vista === 'catalogo') {
+                            this.invocarCabraSegura();
+                        } else if (!cfg.estampidaGlobal) {
+                            this.estampidaAtrapada = false; 
+                        }
+                    }).obtenerConfigPromos();
+                }, 60000);
+
                 google.script.run.withSuccessHandler(res => {
                   this.estadoForzado = res; this.tiendaAbierta = this.evaluarApertura();
                   google.script.run.withSuccessHandler(data => this.procesarMenu(data)).obtenerMenuPOS();
@@ -461,15 +537,67 @@
           } else {
             this.tiendaAbierta = true;
             setTimeout(() => {
-                this.procesarMenu([{ nombre: 'BURGER PRIME', precio: 19000, categoria: 'HAMBURGUESAS', imagen: 'https://placehold.co/400x300' }, { nombre: 'JUGO DE FRESA', precio: 5000, categoria: 'BEBIDAS' }]);
+                this.procesarMenu([{ nombre: 'BURGER ARGENTINA', precio: 22000, categoria: 'HAMBURGUESAS', imagen: 'https://placehold.co/400x300' }, { nombre: 'JUGO DE FRESA', precio: 5000, categoria: 'BEBIDAS' }]);
                 this.iniciarMotorCabra();
             }, 800);
           }
         },
 
+        sonarCabra() {
+          const audio = document.getElementById('audioCabra');
+          if (audio) { 
+              audio.currentTime = 0; 
+              audio.play().catch(e => console.log("Audio bloqueado por navegador", e)); 
+          }
+        },
+
+        iniciarSubasta() {
+            if (this.subastaJugada || this.desglose.total < 5000) return;
+            this.subastaJugada = true;
+            this.subastaVisible = true;
+            this.subastaActiva = true;
+            this.cabraHuyo = false;
+            this.descuentoSubasta = 0;
+            this.sonarCabra(); 
+
+            this.intervaloCaida = setInterval(() => {
+                if (this.descuentoSubasta < this.desglose.subtotal * 0.4) { 
+                    this.descuentoSubasta += 200;
+                }
+            }, 5000);
+
+            let tiempoEscape = Math.floor(Math.random() * (45000 - 15000 + 1)) + 15000;
+            this.timeoutEscape = setTimeout(() => {
+                this.cabraHuye();
+            }, tiempoEscape);
+        },
+
+        congelarPrecio() {
+            if (!this.subastaActiva) return;
+            clearInterval(this.intervaloCaida);
+            clearTimeout(this.timeoutEscape);
+            this.subastaActiva = false;
+            
+            this.descuentoCabra += this.descuentoSubasta;
+            this.subastaVisible = false;
+        },
+
+        cabraHuye() {
+            if (!this.subastaActiva) return;
+            clearInterval(this.intervaloCaida);
+            this.subastaActiva = false;
+            this.cabraHuyo = true;
+            this.descuentoSubasta = 0;
+            this.sonarCabra(); 
+            
+            setTimeout(() => {
+                this.subastaVisible = false;
+            }, 3500);
+        },
+
         iniciarMotorCabra() {
             setInterval(() => {
-                if (this.descuentoCabra > 0 || !this.tiendaAbierta || this.vista !== 'catalogo' || this.modalConfirmacion || this.mostrarTutorial || this.dispositivoBloqueado) return;
+                if (!this.promosActivas.cabra || this.descuentoCabra > 0 || !this.tiendaAbierta || this.vista !== 'catalogo' || this.modalConfirmacion || this.mostrarTutorial || this.dispositivoBloqueado || this.subastaVisible) return;
                 if (Math.random() < 0.03) { 
                     this.cabraTop = Math.floor(Math.random() * 70 + 10) + '%';
                     this.cabraLeft = Math.floor(Math.random() * 70 + 10) + '%';
@@ -488,7 +616,8 @@
 
         atraparCabra() {
             this.cabraActiva = false;
-            this.descuentoCabra = 5000;
+            this.descuentoCabra += 5000; 
+            this.estampidaAtrapada = true; 
             this.modalCabra = true;
         },
 
@@ -602,13 +731,14 @@
 
         procesarSeleccion(prod) {
           const cat = prod.categoria.toUpperCase(); const nombre = prod.nombre.toUpperCase();
-          const esPlatoPrincipal = ['HAMBURGUESAS', 'CARNES ASADAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'PRINCIPAL'].includes(cat);
+          const esPlatoPrincipal = ['HAMBURGUESAS', 'CARNES ASADAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'PAPAS Y PICADAS', 'PRINCIPAL'].includes(cat);
+          
           if (cat === 'BEBIDAS') {
              if (nombre.includes('JUGO') || nombre.includes('LIMONADA')) { this.bebidaActiva = prod; this.bebidaBase = ''; this.bebidaRequiereBase = nombre.includes('JUGO'); this.modalBebida = true; } else { this.agregarDirecto(prod); }
           } else if (esPlatoPrincipal) { 
              this.platoActivo = { ...prod }; 
              this.subItemsActivos = []; 
-             this.tabPersonalizar = 'ADICIONES';
+             this.tabPersonalizar = 'SALSAS';
              this.modalPersonalizar = true; 
           } else { this.agregarDirecto(prod); }
         },
@@ -622,13 +752,53 @@
         },
 
         obtenerCantSubItem(itemRef) { let found = this.subItemsActivos.find(i => i.nombre === itemRef.nombre); return found ? found.cant : 0; },
+        
         ajustarSubItem(itemRef, delta) {
           let idx = this.subItemsActivos.findIndex(i => i.nombre === itemRef.nombre);
           if (idx >= 0) { this.subItemsActivos[idx].cant += delta; if (this.subItemsActivos[idx].cant <= 0) this.subItemsActivos.splice(idx, 1); } else if (delta > 0) { this.subItemsActivos.push({ ...itemRef, cant: 1 }); }
         },
+
+        toggleSubItem(itemRef, isChecked) {
+          let idx = this.subItemsActivos.findIndex(i => i.nombre === itemRef.nombre);
+          if (isChecked && idx < 0) {
+              this.subItemsActivos.push({ ...itemRef, cant: 1 });
+          } else if (!isChecked && idx >= 0) {
+              this.subItemsActivos.splice(idx, 1);
+          }
+        },
+
+        obtenerPrecioDinamicoSalsa(sls) {
+            let salsasSeleccionadas = this.subItemsActivos.filter(i => {
+                let cat = i.categoria ? i.categoria.toUpperCase() : '';
+                let n = i.nombre.toUpperCase();
+                return cat.includes('SALSA') || n.includes("SALSA") || n.includes("GUACAMOLE") || n.includes("CHIMICHURRI") || n.includes("TÁRTARA");
+            });
+
+            let index = salsasSeleccionadas.findIndex(s => s.nombre === sls.nombre);
+            
+            if (index !== -1) {
+                return index < 3 ? 0 : sls.precio; 
+            } else {
+                return salsasSeleccionadas.length < 3 ? 0 : sls.precio; 
+            }
+        },
         
         confirmarPlato() { 
-          let plato = { ...this.platoActivo, id: Date.now() + Math.random(), cant: 1, subItems: JSON.parse(JSON.stringify(this.subItemsActivos)) }; 
+          let salsasContadas = 0;
+          let subItemsProcesados = this.subItemsActivos.map(sub => {
+              let n = sub.nombre.toUpperCase();
+              let c = sub.categoria ? sub.categoria.toUpperCase() : '';
+              let esSalsa = c.includes('SALSA') || n.includes("SALSA") || n.includes("GUACAMOLE") || n.includes("CHIMICHURRI") || n.includes("TÁRTARA");
+              
+              if (esSalsa) {
+                  let precioAplicar = salsasContadas < 3 ? 0 : sub.precio;
+                  salsasContadas += sub.cant; 
+                  return { ...sub, precio: precioAplicar };
+              }
+              return { ...sub };
+          });
+
+          let plato = { ...this.platoActivo, id: Date.now() + Math.random(), cant: 1, subItems: subItemsProcesados }; 
           this.carrito.push(plato); 
           this.modalPersonalizar = false; 
           this.verificarUpsell(plato); 
@@ -699,18 +869,56 @@
         },
 
         get desglose() {
-          let sub = 0; let sls = 0; let cont = 0;
-          let emp = ['DOMICILIO', 'PARA LLEVAR'].includes(this.cliente.tipo_pedido) ? 2000 : 0;
-          let dom = this.cliente.tipo_pedido === 'DOMICILIO' ? this.tarifaCalculada : 0;
+          let sub = 0; let sls = 0; let emp = 0; let dom = 0;
+          let tipoP = this.cliente.tipo_pedido;
+          let platosPrincipales = 0;
+          let requiereEmpaqueGeneral = 0;
+
+          this.carrito.forEach(item => { 
+              let nTemp = item.nombre.toUpperCase();
+              let cTemp = item.categoria ? item.categoria.toUpperCase() : '';
+              
+              let esBebida = ["DEL VALLE", "COCA", "SPRITE", "PREMIO", "CUATRO", "JUGO", "LIMONADA", "AGUA"].some(b => nTemp.includes(b)) || cTemp.includes("BEBIDA");
+              let esSalsa = cTemp.includes('SALSA') || nTemp.includes("SALSA") || nTemp.includes("GUACAMOLE") || nTemp.includes("CHIMICHURRI") || nTemp.includes("TÁRTARA");
+              let esAdicion = ["ADICION", "ADICIÓN", "EXTRA"].includes(cTemp) && !nTemp.includes("PAPAS");
+              
+              let excluidoDeEmpaque = esBebida || esSalsa || nTemp === "CABRA DE ORO" || nTemp === "DOMICILIO" || nTemp === "COSTO EMPAQUE";
+              let esPrincipal = !excluidoDeEmpaque && !esAdicion;
+              
+              if (esPrincipal) platosPrincipales += Number(item.cant);
+              if (!excluidoDeEmpaque) requiereEmpaqueGeneral += Number(item.cant);
+
+              sub += (Number(item.precio) * Number(item.cant)); 
+              if (item.subItems) {
+                  item.subItems.forEach(s => {
+                      let totalSub = (Number(s.precio) * Number(s.cant) * Number(item.cant));
+                      let n = s.nombre.toUpperCase();
+                      let c = s.categoria ? s.categoria.toUpperCase() : '';
+                      let esSalsaSub = c.includes('SALSA') || n.includes("SALSA") || n.includes("GUACAMOLE") || n.includes("CHIMICHURRI") || n.includes("TÁRTARA");
+                      
+                      if(esSalsaSub && totalSub > 0) {
+                          sls += totalSub;
+                      } else {
+                          sub += totalSub;
+                      }
+                  }); 
+              }
+          });
           
-          const procesarPrecio = (item, baseCant) => {
-            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
-              for (let i = 0; i < (item.cant * baseCant); i++) { if (cont >= 2) sls += item.precio; cont++; }
-            } else { sub += (item.precio * item.cant * baseCant); }
-          };
-          this.carrito.forEach(item => { procesarPrecio(item, 1); if (item.subItems) item.subItems.forEach(s => procesarPrecio(s, item.cant)); });
-          
-          let d = this.descuentoCabra;
+          if (['DOMICILIO', 'PARA LLEVAR'].includes(tipoP)) {
+              if (platosPrincipales > 0) {
+                  emp = 1000 * platosPrincipales;
+              } else if (requiereEmpaqueGeneral > 0) {
+                  emp = 1000;
+              } else {
+                  emp = 0;
+              }
+          }
+          if (tipoP === 'DOMICILIO') {
+              dom = this.tarifaCalculada;
+          }
+
+          let d = this.descuentoCabra || 0;
           let tot = sub + emp + sls + dom - d;
           if (tot < 0) tot = 0;
 
@@ -724,7 +932,7 @@
           if (this.cliente.tipo_pedido === 'DOMICILIO' && !this.cliente.direccion) return alert("⚠️ Dirección requerida.");
           if (this.errorDireccion && this.cliente.tipo_pedido === 'DOMICILIO') return alert("⚠️ Corrige la dirección antes de continuar.");
           
-          this.enviando = true; let tReserva = this.desglose.total; let payload = []; let contS = 0;
+          this.enviando = true; let tReserva = this.desglose.total; let payload = [];
           let tipoCopia = this.cliente.tipo_pedido;
           let notasEnvio = this.cliente.notas || '';
 
@@ -734,19 +942,21 @@
           }
 
           const aplanar = (item, multi) => {
-            let t = 0;
-            if (item.categoria && item.categoria.toUpperCase() === 'SALSA') {
-              for (let i=0; i < (item.cant * multi); i++) { if (contS >= 2) t += item.precio; contS++; }
-            } else { t = item.precio * (item.cant * multi); }
-            payload.push({ nombre: item.nombre, cant: (item.cant * multi), precioTotalCalculado: t });
+            let t = Number(item.precio) * (Number(item.cant) * multi);
+            payload.push({ nombre: item.nombre, cant: (Number(item.cant) * multi), precioTotalCalculado: t });
           };
 
-          this.carrito.forEach(item => { aplanar(item, 1); if (item.subItems) item.subItems.forEach(s => aplanar(s, item.cant)); });
+          this.carrito.forEach(item => { 
+              aplanar(item, 1); 
+              if (item.subItems) item.subItems.forEach(s => aplanar(s, Number(item.cant))); 
+          });
+
           if (this.cliente.tipo_pedido === 'DOMICILIO') payload.push({ nombre: 'DOMICILIO', cant: 1, precioTotalCalculado: this.desglose.domicilio });
+          if (['DOMICILIO', 'PARA LLEVAR'].includes(this.cliente.tipo_pedido) && this.desglose.empaque > 0) payload.push({ nombre: 'COSTO EMPAQUE', cant: 1, precioTotalCalculado: this.desglose.empaque });
 
           if (this.desglose.descuento > 0) {
               payload.push({ nombre: 'CABRA DE ORO', cant: 1, precioTotalCalculado: -this.desglose.descuento });
-              notasEnvio = `[🎁 GANADOR CABRA DE ORO: -$${this.desglose.descuento.toLocaleString()}]\n` + notasEnvio;
+              notasEnvio = `[🎁 DESCUENTOS DE CABRA APLICADOS: -$${this.desglose.descuento.toLocaleString()}]\n` + notasEnvio;
           }
 
           let payloadFinal = { nombre: this.cliente.nombre, celular: this.cliente.celular, tipo_pedido: tipoCopia, metodo_pago: this.cliente.metodo_pago, direccion: this.cliente.direccion, notas: notasEnvio };
