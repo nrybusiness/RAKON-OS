@@ -1,20 +1,25 @@
 /**
  * RAKON - ENRUTADOR MAESTRO (Codigo.gs)
+ * Arquitectura Modular (Opción B)
  * Gestión exclusiva de peticiones GET (Vistas) y POST (Endpoints).
  */
 
+// ==========================================
+// [MÓDULO 01] - ENRUTADOR DE VISTAS Y API (GET)
+// ==========================================
 function doGet(e) {
   const modo = e?.parameter?.mode || 'menu';
   
   if (modo === 'api_rastreo') {
     const turno = e?.parameter?.turno || "";
     const callback = e?.parameter?.callback;
+    
     if (turno) {
       const cache = CacheService.getScriptCache();
       const limitKey = "RASTREO_LIMIT_" + turno;
       let intentos = Number(cache.get(limitKey)) || 0;
       
-      if (intentos > 10) {
+      if (intentos > 15) { 
          const errRes = { encontrado: false, estado: "BLOQUEADO TEMPORALMENTE", error: "Demasiadas consultas" };
          if (callback) return ContentService.createTextOutput(callback + '(' + JSON.stringify(errRes) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
          return ContentService.createTextOutput(JSON.stringify(errRes)).setMimeType(ContentService.MimeType.JSON);
@@ -24,11 +29,9 @@ function doGet(e) {
 
     const resultado = buscarEstadoPedido(turno);
     if (callback) {
-      return ContentService.createTextOutput(callback + '(' + JSON.stringify(resultado) + ');')
-          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(resultado) + ');').setMimeType(ContentService.MimeType.JAVASCRIPT);
     }
-    return ContentService.createTextOutput(JSON.stringify(resultado))
-        .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify(resultado)).setMimeType(ContentService.MimeType.JSON);
   }
 
   let archivo = 'Menu';
@@ -42,11 +45,17 @@ function doGet(e) {
   return tmp.evaluate()
       .setTitle('Hunger Burgers - ' + modo.toUpperCase())
       .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // <-- Directiva inyectada correctamente
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// ==========================================
+// [MÓDULO 02] - CONTROLADOR DE TRANSACCIONES (POST)
+// ==========================================
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
+    lock.waitLock(10000);
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const shP = ss.getSheetByName("PEDIDOS_ACTIVOS");
     if (!shP) throw new Error("Hoja PEDIDOS_ACTIVOS no encontrada");
@@ -54,10 +63,11 @@ function doPost(e) {
     if (!e || !e.parameter) return responderJSON("error", "Sin datos");
     const p = e.parameter;
     
+    // --- Submódulo: Acciones Rápidas (Endpoints de Admin) ---
     if (p.accion) {
-      if (p.accion === "registrar_compras") registrarCompra();
-      if (p.accion === "aplicar_merma") registrarMermaOConsumo();
-      if (p.accion === "cierre_turno") cierreDeTurno();
+      if (p.accion === "registrar_compras") { registrarCompra(); return responderJSON("success", "Compras registradas"); }
+      if (p.accion === "aplicar_merma") { registrarMermaOConsumo(); return responderJSON("success", "Mermas aplicadas"); }
+      if (p.accion === "cierre_turno") { cierreDeTurno(); return responderJSON("success", "Turno cerrado"); }
       
       if (p.accion === "guardar_compras_lote") {
          let comprasArray = JSON.parse(p.compras_data);
@@ -81,6 +91,7 @@ function doPost(e) {
       return responderJSON("success", "Comando ejecutado");
     }
 
+    // --- Submódulo: Procesamiento Legacy POST (Formularios Antiguos) ---
     const nombre = sanitizarTexto(p.nombre || "Invitado").toUpperCase();
     const celular = sanitizarTexto(p.celular || "");
     const notas = sanitizarTexto(p.notas || "");
@@ -92,21 +103,15 @@ function doPost(e) {
     if (celular) {
       const cache = CacheService.getScriptCache();
       const lockKey = "PEDIDO_LOCK_" + celular;
-      if (cache.get(lockKey)) {
-        return responderJSON("error", "Demasiados pedidos en poco tiempo. Por favor espera 1 minuto.");
-      }
+      if (cache.get(lockKey)) return responderJSON("error", "Procesando... Espera 1 minuto.");
       cache.put(lockKey, "locked", 60); 
     }
 
     let itemsParaInsertar = [];
     for (let persona = 1; persona <= numPersonas; persona++) {
-      let inicioProd = ((persona - 1) * 5) + 1;
-      let finProd = persona * 5;
-      for (let i = inicioProd; i <= finProd; i++) {
+      for (let i = ((persona - 1) * 5) + 1; i <= persona * 5; i++) {
         let nombreProd = p["producto" + i];
-        if (nombreProd && nombreProd !== "Elegir..." && nombreProd !== "") {
-          itemsParaInsertar.push({ nombre: String(nombreProd).trim().toUpperCase(), cant: 1 });
-        }
+        if (nombreProd && nombreProd !== "Elegir..." && nombreProd !== "") itemsParaInsertar.push({ nombre: String(nombreProd).trim().toUpperCase(), cant: 1 });
       }
     }
 
@@ -123,81 +128,56 @@ function doPost(e) {
       "add_s_pina": "SALSA PIÑA","add_papas": "PAPAS PARA COMBO", "add_s_tomate": "SALSA TOMATE", 
       "add_guacamole": "GUACAMOLE ESPECIAL"
     };
-    
+
     for (let clave in mapaAdiciones) {
-      if (p[clave] === "on" || p[clave] === "true") {
-        itemsParaInsertar.push({ nombre: mapaAdiciones[clave], cant: 1 });
-      }
+      if (p[clave] === "on" || p[clave] === "true") itemsParaInsertar.push({ nombre: mapaAdiciones[clave], cant: 1 });
     }
 
     for (let param in p) {
-      if (param.startsWith("promo_") && p[param] && p[param] !== "") {
-        itemsParaInsertar.push({ nombre: String(p[param]).trim().toUpperCase(), cant: 1 });
-      }
+      if (param.startsWith("promo_") && p[param] && p[param] !== "") itemsParaInsertar.push({ nombre: String(p[param]).trim().toUpperCase(), cant: 1 });
     }
 
-    let estadoInicial = (metodo_pago === "NEQUI" || (["LOCAL", "PARA LLEVAR"].includes(tipo_pedido) && metodo_pago === "EFECTIVO")) 
-                        ? "POR PAGAR 💰" : "PENDIENTE";
+    let estadoInicial = (metodo_pago === "NEQUI" || (["LOCAL", "PARA LLEVAR"].includes(tipo_pedido) && metodo_pago === "EFECTIVO")) ? "POR PAGAR 💰" : "PENDIENTE";
 
-    let existeDom = itemsParaInsertar.some(item => String(item.nombre).toUpperCase() === "DOMICILIO");
-    if (tipo_pedido === "DOMICILIO" && !existeDom) {
-        itemsParaInsertar.push({ nombre: "DOMICILIO", cant: 1 });
-    }
-
-    let existeEmp = itemsParaInsertar.some(item => String(item.nombre).toUpperCase() === "COSTO EMPAQUE");
-    if ((tipo_pedido === "DOMICILIO" || tipo_pedido === "PARA LLEVAR") && !existeEmp) {
-        itemsParaInsertar.push({ nombre: "COSTO EMPAQUE", cant: 1 });
-    }
+    if (tipo_pedido === "DOMICILIO" && !itemsParaInsertar.some(item => String(item.nombre).toUpperCase() === "DOMICILIO")) itemsParaInsertar.push({ nombre: "DOMICILIO", cant: 1 });
+    if ((tipo_pedido === "DOMICILIO" || tipo_pedido === "PARA LLEVAR") && !itemsParaInsertar.some(item => String(item.nombre).toUpperCase() === "COSTO EMPAQUE")) itemsParaInsertar.push({ nombre: "COSTO EMPAQUE", cant: 1 });
 
     const baseTurno = String(p.turno_temp || "0000").trim();
     const timestampID = Date.now().toString(36).toUpperCase().slice(-6); 
     const idOficial = celular ? `${celular}-${baseTurno}-${timestampID}` : `INV-${baseTurno}-${timestampID}`;
     const fechaActual = new Date();
 
-    const shR = ss.getSheetByName("RECETAS");
-    let rec = shR ? shR.getDataRange().getValues() : [];
+    const rec = getRecetasCached();
     let preciosDB = {};
-    let reqEmpaque = {};
-    let catMap = {};
-    
     for (let r = 1; r < rec.length; r++) {
       let n = String(rec[r][0]).trim().toUpperCase();
-      let ing = String(rec[r][1]).trim().toUpperCase();
       let pr = Number(rec[r][4]) || 0;
-      let categoriaRaw = String(rec[r][5] || "").trim().toUpperCase();
-      if (n) {
-        if (preciosDB[n] === undefined || (preciosDB[n] === 0 && pr > 0)) preciosDB[n] = pr;
-        if (/\[LLEVAR\]/i.test(ing)) reqEmpaque[n] = true;
-        if (categoriaRaw !== "" && !catMap[n]) catMap[n] = categoriaRaw;
-      }
+      if (n && (preciosDB[n] === undefined || (preciosDB[n] === 0 && pr > 0))) preciosDB[n] = pr;
     }
 
     if (itemsParaInsertar.length > 0) {
+      let salsasGratisDisponibles = 0;
+      itemsParaInsertar.forEach(item => {
+         let n = item.nombre.toUpperCase();
+         if (!n.includes("SALSA") && !n.includes("DOMICILIO") && !n.includes("EMPAQUE") && n !== "CABRA DE ORO" && !n.includes("GUACAMOLE") && !n.includes("CHIMICHURRI") && !n.includes("TÁRTARA")) {
+             salsasGratisDisponibles += (item.cant * 2);
+         }
+      });
+
       let contadorSalsas = 0;
       let filas = itemsParaInsertar.map(item => {
          let precioBase = preciosDB[item.nombre] !== undefined ? preciosDB[item.nombre] : 0;
-         if (item.nombre === "COSTO EMPAQUE") precioBase = COSTO_EMPAQUE_FIJO;
-         let catOficial = catMap[item.nombre] || "";
+         if (item.nombre === "COSTO EMPAQUE") precioBase = 2000;
 
-         let esSalsa = catOficial.includes("SALSA") || 
-                        item.nombre.includes("SALSA") || 
-                        item.nombre.includes("GUACAMOLE") || 
-                        item.nombre.includes("CHIMICHURRI");
-
+         let esSalsa = item.nombre.includes("SALSA") || item.nombre.includes("GUACAMOLE") || item.nombre.includes("CHIMICHURRI") || item.nombre.includes("TÁRTARA");
          let totalCalculado = 0;
 
          if (esSalsa) {
              for (let i = 0; i < item.cant; i++) {
-                 if (contadorSalsas < 2) {
-                     totalCalculado += 0; 
-                 } else {
-                     totalCalculado += 500; 
-                 }
+                 if (contadorSalsas < salsasGratisDisponibles) totalCalculado += 0; else totalCalculado += 500; 
                  contadorSalsas++;
              }
-         } else {
-             totalCalculado = precioBase * item.cant;
-         }
+         } else { totalCalculado = precioBase * item.cant; }
 
          return [idOficial, item.nombre, item.cant, estadoInicial, fechaActual, nombre, celular, notas, totalCalculado, tipo_pedido, metodo_pago, "", direccion];
       });
@@ -208,10 +188,15 @@ function doPost(e) {
 
     return responderJSON("success", idOficial);
   } catch (error) {
-    return responderJSON("error", error.toString());
+    return responderJSON("error", "Error al procesar: " + error.toString());
+  } finally {
+    lock.releaseLock();
   }
 }
 
+// ==========================================
+// [MÓDULO 03] - UTILIDADES DE RESPUESTA
+// ==========================================
 function responderJSON(status, data) {
   return ContentService.createTextOutput(JSON.stringify({"result": status, "data": data})).setMimeType(ContentService.MimeType.JSON);
 }
