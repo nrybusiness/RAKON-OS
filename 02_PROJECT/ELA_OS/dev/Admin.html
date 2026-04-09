@@ -26,6 +26,10 @@
     .loader { border-top-color: #C78D2B; -webkit-animation: spinner 1s linear infinite; animation: spinner 1s linear infinite; }
     @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; padding: 15px;}
+    
+    /* Toggle Switch CSS para Consola Promos */
+    .toggle-checkbox:checked { right: 0; border-color: #10B981; }
+    .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
   </style>
 </head>
 <body class="antialiased pb-12">
@@ -45,6 +49,8 @@
     <button onclick="abrirModalCompras()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-blue-700 transition">🛒 Compras</button>
     <button onclick="abrirModalMermas()" class="bg-yellow-500 text-[#212529] px-5 py-2.5 rounded-lg font-bold shadow hover:bg-yellow-400 transition">🗑️ Mermas</button>
     <button onclick="confirmarCierre()" class="bg-danger text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-red-700 transition">📅 Cierre Turno</button>
+    
+    <button onclick="abrirModalPromos()" class="bg-purple-600 text-white px-5 py-2.5 rounded-lg font-bold shadow hover:bg-purple-700 transition border border-purple-800 animate-pulse">🕹️ Consola Promos</button>
 
     <div class="flex items-center gap-2 bg-[#212529] px-3 py-2 rounded-lg border border-[#495057] ml-auto">
        <span class="text-xs font-bold text-gray-300">ESTADO APP:</span>
@@ -70,11 +76,54 @@
   <audio id="sonidoAlarma" preload="auto">
   <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
   <source src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" type="audio/mpeg">
-</audio>
+  </audio>
 
   <div id="loadingOverlay">
     <div class="loader rounded-full border-4 border-t-4 border-gray-200 h-16 w-16 mb-4"></div>
     Procesando petición...
+  </div>
+
+  <div id="modalPromos" class="modal-overlay">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border-4 border-purple-600 relative overflow-hidden">
+      <div class="flex justify-between items-center mb-6 relative">
+        <h2 class="text-2xl font-display text-oscuro w-full">🕹️ Gamificación</h2>
+        <button onclick="cerrarModalPromos()" class="absolute right-0 text-3xl text-gray-500 hover:text-danger leading-none">×</button>
+      </div>
+
+      <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4 mb-6">
+        <div class="flex justify-between items-center">
+            <div class="text-left">
+                <p class="font-bold text-oscuro">Subasta Inversa 📉</p>
+                <p class="text-xs text-gray-500">Descuento en carrito inactivo</p>
+            </div>
+            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" id="toggleSubasta" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggleSubasta" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+        </div>
+        <hr class="border-gray-200">
+        <div class="flex justify-between items-center">
+            <div class="text-left">
+                <p class="font-bold text-oscuro">Cabra de Oro 🐐</p>
+                <p class="text-xs text-gray-500">Aparición aleatoria 3%</p>
+            </div>
+            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input type="checkbox" id="toggleCabra" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                <label for="toggleCabra" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+            </div>
+        </div>
+      </div>
+
+      <button onclick="guardarCambiosPromos()" class="w-full bg-oscuro text-white py-3 rounded-lg font-bold hover:bg-gray-800 shadow mb-6">💾 Guardar Cambios</button>
+
+      <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200">
+          <p class="font-bold text-danger mb-2 font-display text-lg">⚠️ ESTAMPIDA GLOBAL</p>
+          <p class="text-xs text-red-800 mb-4 font-bold">Garantiza la aparición de la Cabra a TODOS los clientes conectados en los próximos 5 minutos.</p>
+          <button onclick="lanzarEstampida()" class="w-full bg-danger text-white py-3 rounded-lg font-bold hover:bg-red-700 shadow flex justify-center gap-2 items-center">
+              <span>🚀 LANZAR AHORA</span>
+          </button>
+      </div>
+    </div>
   </div>
 
   <div id="modalPOS" class="modal-overlay">
@@ -229,6 +278,9 @@
   </div>
 
   <script>
+    // ==========================================
+    // [MÓDULO 04] - VARIABLES GLOBALES Y NÚCLEO
+    // ==========================================
     const esAdmin = true;
 
     window.onload = () => { cargarSistemaCentral(); cargarEstadoLocal(); };
@@ -267,6 +319,9 @@
       }
     }
 
+    // ==========================================
+    // [MÓDULO 05] - MOTOR DE AUDIO Y ALARMAS
+    // ==========================================
     document.body.addEventListener('click', function() {
       if (!audioDesbloqueado) {
         const audio = document.getElementById('sonidoAlarma'); audio.volume = 0; let playPromise = audio.play();
@@ -276,10 +331,62 @@
 
     function dispararAlarma() {
       if (!alarmasActivadas || !audioDesbloqueado) return;
-      const audio = document.getElementById('sonidoAlarma'); audio.currentTime = 0;
-      let playPromise = audio.play(); if (playPromise !== undefined) playPromise.catch(e => console.log("Alarma bloqueada", e));
+      const audio = document.getElementById('sonidoAlarma');
+      audio.currentTime = 0;
+      let playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Fallo audio externo, iniciando Beep de emergencia:", error);
+          const context = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = context.createOscillator();
+          const gain = context.createGain();
+          osc.connect(gain); gain.connect(context.destination);
+          osc.type = "sine"; osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0, context.currentTime);
+          gain.gain.linearRampToValueAtTime(0.5, context.currentTime + 0.1);
+          gain.gain.linearRampToValueAtTime(0, context.currentTime + 0.5);
+          osc.start(context.currentTime); osc.stop(context.currentTime + 0.5);
+        });
+      }
     }
 
+    // ==========================================
+    // [MÓDULO 06] - LÓGICA DE PROMOCIONES (GAMIFICACIÓN)
+    // ==========================================
+    function abrirModalPromos() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        google.script.run.withSuccessHandler(config => {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('toggleSubasta').checked = config.subastaActiva;
+            document.getElementById('toggleCabra').checked = config.cabraActiva;
+            document.getElementById('modalPromos').style.display = 'flex';
+        }).withFailureHandler(errorServidor).obtenerConfigPromos();
+    }
+
+    function cerrarModalPromos() { document.getElementById('modalPromos').style.display = 'none'; }
+
+    function guardarCambiosPromos() {
+        const subasta = document.getElementById('toggleSubasta').checked;
+        const cabra = document.getElementById('toggleCabra').checked;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        google.script.run.withSuccessHandler(msg => {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            alert(msg); cerrarModalPromos();
+        }).withFailureHandler(errorServidor).guardarConfigPromos(subasta, cabra);
+    }
+
+    function lanzarEstampida() {
+        if(!confirm("⚠️ ¿Estás seguro? Todos los que abran el menú en los próximos 5 minutos verán la cabra.")) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        google.script.run.withSuccessHandler(msg => {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            alert(msg); cerrarModalPromos();
+        }).withFailureHandler(errorServidor).lanzarEstampidaGlobal();
+    }
+
+    // ==========================================
+    // [MÓDULO 07] - ACCIONES KITCHEN DISPLAY SYSTEM (KDS)
+    // ==========================================
     function avanzarPedido(id) {
       if (!id) return;
       document.getElementById('loadingOverlay').style.display = 'flex';
@@ -326,6 +433,9 @@
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).marcarPedidoRushRemoto(id);
     }
 
+    // ==========================================
+    // [MÓDULO 08] - LÓGICA DE PUNTO DE VENTA (POS)
+    // ==========================================
     function buscarUniversalPOS(texto) {
       let txt = texto.toLowerCase(); let allItems = [...arrPrincipales, ...arrExtras, ...arrBebidas];
       let gridsToHide = ['gridPrincipal', 'gridExtras', 'gridBebidas'];
@@ -339,7 +449,6 @@
     function clasificarMenuPOS(lista) {
       arrPrincipales = []; arrBebidas = []; arrExtras = [];
       const catsPrincipales = ['HAMBURGUESAS', 'CARNES ASADAS', 'PAPAS Y PICADAS', 'PERROS Y PERRAS', 'PATACONES Y BURRITOS', 'PRINCIPAL'];
-
       lista.forEach(i => {
          let cat = i.categoria ? i.categoria.toUpperCase() : "";
          if (cat.includes("INGREDIENTE")) return;
@@ -348,20 +457,20 @@
          else if (catsPrincipales.includes(cat)) arrPrincipales.push(i);
          else arrPrincipales.push(i); 
       });
-
       renderGrid('gridPrincipal', arrPrincipales); renderGrid('gridExtras', arrExtras); renderGrid('gridBebidas', arrBebidas);
     }
 
     function renderGrid(containerId, arr) {
-      const contenedor = document.getElementById(containerId); if(!contenedor) return; contenedor.innerHTML = "";
+      const contenedor = document.getElementById(containerId); if(!contenedor) return;
+      let html = "";
       arr.forEach(item => {
-        const btn = document.createElement('button');
-        btn.className = 'bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm hover:border-blue-500 hover:shadow-md transition text-left flex flex-col justify-between';
         let colorPrecio = item.precio > 0 ? "text-green-600" : "text-danger";
-        btn.innerHTML = `<span class="font-bold text-[#343a40] text-[13px] leading-tight mb-2">${item.nombre}</span><span class="font-bold ${colorPrecio} text-[15px]">$${item.precio.toLocaleString()}</span>`;
-        btn.onclick = () => agregarCarritoPOS(item.nombre, item.precio, item.requiereEmpaque, item.categoria);
-        contenedor.appendChild(btn);
+        html += `<button class="bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm hover:border-blue-500 hover:shadow-md transition text-left flex flex-col justify-between" onclick="agregarCarritoPOS('${item.nombre}', ${item.precio}, ${item.requiereEmpaque}, '${item.categoria}')">
+          <span class="font-bold text-[#343a40] text-[13px] leading-tight mb-2">${item.nombre}</span>
+          <span class="font-bold ${colorPrecio} text-[15px]">$${item.precio.toLocaleString()}</span>
+        </button>`;
       });
+      contenedor.innerHTML = html;
     }
 
     function cambiarPasoPOS(direccion) {
@@ -388,9 +497,9 @@
         if (tipo === "DOMICILIO") {
             let domItem = menuPOSGlobal.find(m => m.nombre === "DOMICILIO"); let precioDom = domItem ? domItem.precio : 2000;
             carritoPOS.push({nombre: "DOMICILIO", precio: precioDom, cant: 1, requiereEmpaque: false, categoria: "", precioEditado: false, domAuto: true});
-            carritoPOS.push({nombre: "COSTO EMPAQUE", precio: 2000, cant: 1, requiereEmpaque: false, categoria: "", precioEditado: false, domAuto: true});
+            carritoPOS.push({nombre: "COSTO EMPAQUE", precio: 1000, cant: 1, requiereEmpaque: false, categoria: "", precioEditado: false, domAuto: true});
         } else if (tipo === "PARA LLEVAR") {
-            carritoPOS.push({nombre: "COSTO EMPAQUE", precio: 2000, cant: 1, requiereEmpaque: false, categoria: "", precioEditado: false, domAuto: true});
+            carritoPOS.push({nombre: "COSTO EMPAQUE", precio: 1000, cant: 1, requiereEmpaque: false, categoria: "", precioEditado: false, domAuto: true});
         }
         dibujarCarritoPOS();
     }
@@ -451,22 +560,54 @@
     }
 
     function dibujarCarritoPOS() {
-      const tbody = document.getElementById('bodyCarritoPOS'); tbody.innerHTML = ""; let granTotal = 0; let contadorSalsas = 0;
+      const tbody = document.getElementById('bodyCarritoPOS'); 
+      let granTotal = 0; let html = "";
+      
+      let salsasGratisDisponibles = 0; let platosPrincipales = 0; let requiereEmpaqueGeneral = 0;
+
+      carritoPOS.forEach(item => {
+         let n = item.nombre.toUpperCase(); let c = item.categoria ? item.categoria.toUpperCase() : '';
+         let esBebida = ["DEL VALLE", "COCA", "SPRITE", "PREMIO", "CUATRO", "JUGO", "LIMONADA", "AGUA"].some(b => n.includes(b)) || c.includes("BEBIDA");
+         let esSalsa = c.includes('SALSA') || n.includes("SALSA") || n.includes("GUACAMOLE") || n.includes("CHIMICHURRI") || n.includes("TÁRTARA");
+         let esAdicion = ["ADICION", "ADICIÓN", "EXTRA"].includes(c) && !n.includes("PAPAS");
+         let excluidoDeEmpaque = esBebida || esSalsa || n === "CABRA DE ORO" || n === "DOMICILIO" || n === "COSTO EMPAQUE";
+         let esPrincipal = !excluidoDeEmpaque && !esAdicion;
+
+         if (esPrincipal) { salsasGratisDisponibles += (Number(item.cant) * 3); platosPrincipales += Number(item.cant); }
+         if (!excluidoDeEmpaque) { requiereEmpaqueGeneral += Number(item.cant); }
+      });
+
+      let contadorSalsas = 0;
+      
       carritoPOS.forEach((item, idx) => {
+        if (item.nombre === "COSTO EMPAQUE" && item.domAuto) {
+            if (platosPrincipales > 0) item.cant = platosPrincipales; else if (requiereEmpaqueGeneral > 0) item.cant = 1; else item.cant = 0; 
+        }
+
         let precioAAplicar = item.precio; let totalFila = 0;
-        if (item.categoria === "SALSA" && !item.precioEditado) { for(let i = 0; i < item.cant; i++) { if (contadorSalsas < 2) totalFila += 0; else totalFila += precioAAplicar; contadorSalsas++; } } else { totalFila = precioAAplicar * item.cant; }
+        let esSalsa = item.categoria === "SALSA" || item.nombre.includes("SALSA") || item.nombre.includes("GUACAMOLE") || item.nombre.includes("CHIMICHURRI") || item.nombre.includes("TÁRTARA");
+        
+        if (esSalsa && !item.precioEditado) { 
+           for(let i = 0; i < item.cant; i++) { 
+              if (contadorSalsas < salsasGratisDisponibles) totalFila += 0; else totalFila += precioAAplicar; 
+              contadorSalsas++; 
+           } 
+        } else { totalFila = precioAAplicar * item.cant; }
+        
         granTotal += totalFila;
         
-        tbody.innerHTML += `
-          <tr>
-            <td class="pb-2 flex items-center gap-1"><button class="bg-gray-200 w-6 h-6 rounded text-oscuro font-bold hover:bg-gray-300" onclick="modificarCantPOS(${idx}, false)">-</button><span class="w-4 text-center font-bold text-[13px]">${item.cant}</span><button class="bg-gray-200 w-6 h-6 rounded text-oscuro font-bold hover:bg-gray-300" onclick="modificarCantPOS(${idx}, true)">+</button></td>
-            <td class="pb-2 font-bold text-[13px]">${item.nombre}</td>
-            <td class="pb-2 text-right text-gray-600 font-semibold">$${totalFila.toLocaleString()} <button class="ml-1 text-[11px]" onclick="editarPrecioPOS(${idx}, ${precioAAplicar})">✏️</button></td>
-            <td class="pb-2 text-right"><button class="text-danger font-bold ml-2" onclick="carritoPOS.splice(${idx},1); dibujarCarritoPOS();">X</button></td>
-          </tr>
-        `;
+        if (item.cant > 0) {
+          html += `
+            <tr>
+              <td class="pb-2 flex items-center gap-1"><button class="bg-gray-200 w-6 h-6 rounded text-oscuro font-bold hover:bg-gray-300" onclick="modificarCantPOS(${idx}, false)">-</button><span class="w-4 text-center font-bold text-[13px]">${item.cant}</span><button class="bg-gray-200 w-6 h-6 rounded text-oscuro font-bold hover:bg-gray-300" onclick="modificarCantPOS(${idx}, true)">+</button></td>
+              <td class="pb-2 font-bold text-[13px]">${item.nombre}</td>
+              <td class="pb-2 text-right text-gray-600 font-semibold">$${totalFila.toLocaleString()} <button class="ml-1 text-[11px]" onclick="editarPrecioPOS(${idx}, ${precioAAplicar})">✏️</button></td>
+              <td class="pb-2 text-right"><button class="text-danger font-bold ml-2" onclick="carritoPOS.splice(${idx},1); dibujarCarritoPOS();">X</button></td>
+            </tr>
+          `;
+        }
       });
-      document.getElementById('totalPOS').innerText = granTotal.toLocaleString();
+      tbody.innerHTML = html; document.getElementById('totalPOS').innerText = granTotal.toLocaleString();
     }
 
     function enviarPedidoPOS() {
@@ -478,28 +619,60 @@
 
       let tipoF = tipo; if (tipoF === "LOCAL") tipoF = "LOCAL ⚡";
       let datosCliente = { nombre: cliente, celular: celular, tipo_pedido: tipoF, metodo_pago: pago, direccion: dir, notas: notas };
-      let contadorSalsasEnvio = 0;
-      let carritoParaEnviar = carritoPOS.map(item => {
-          let precioFinalUnidad = item.precio; let totalItem = 0;
-          if (item.categoria === "SALSA" && !item.precioEditado) { for(let i=0; i<item.cant; i++) { if (contadorSalsasEnvio < 2) totalItem += 0; else totalItem += precioFinalUnidad; contadorSalsasEnvio++; } } else { totalItem = precioFinalUnidad * item.cant; }
-          return { nombre: item.nombre, cant: item.cant, precioTotalCalculado: totalItem };
+      
+      let salsasGratisDisponibles = 0; let platosPrincipalesEnvio = 0; let requiereEmpaqueGeneralEnvio = 0;
+
+      carritoPOS.forEach(item => {
+         let n = item.nombre.toUpperCase(); let c = item.categoria ? item.categoria.toUpperCase() : '';
+         let esBebida = ["DEL VALLE", "COCA", "SPRITE", "PREMIO", "CUATRO", "JUGO", "LIMONADA", "AGUA"].some(b => n.includes(b)) || c.includes("BEBIDA");
+         let esSalsa = c.includes('SALSA') || n.includes("SALSA") || n.includes("GUACAMOLE") || n.includes("CHIMICHURRI") || n.includes("TÁRTARA");
+         let esAdicion = ["ADICION", "ADICIÓN", "EXTRA"].includes(c) && !n.includes("PAPAS");
+         let excluidoDeEmpaque = esBebida || esSalsa || n === "CABRA DE ORO" || n === "DOMICILIO" || n === "COSTO EMPAQUE";
+         let esPrincipal = !excluidoDeEmpaque && !esAdicion;
+         
+         if (esPrincipal) { salsasGratisDisponibles += (Number(item.cant) * 3); platosPrincipalesEnvio += Number(item.cant); }
+         if (!excluidoDeEmpaque) { requiereEmpaqueGeneralEnvio += Number(item.cant); }
+      });
+
+      let contadorSalsasEnvio = 0; let carritoParaEnviar = [];
+      
+      carritoPOS.forEach(item => {
+          if (item.nombre === "COSTO EMPAQUE" && item.domAuto) {
+              if (platosPrincipalesEnvio > 0) item.cant = platosPrincipalesEnvio; else if (requiereEmpaqueGeneralEnvio > 0) item.cant = 1; else item.cant = 0;
+          }
+
+          if (item.cant > 0) {
+              let precioFinalUnidad = item.precio; let totalItem = 0;
+              let esSalsa = item.categoria === "SALSA" || item.nombre.includes("SALSA") || item.nombre.includes("GUACAMOLE") || item.nombre.includes("CHIMICHURRI") || item.nombre.includes("TÁRTARA");
+              
+              if (esSalsa && !item.precioEditado) { 
+                 for(let i=0; i<item.cant; i++) { 
+                    if (contadorSalsasEnvio < salsasGratisDisponibles) totalItem += 0; else totalItem += precioFinalUnidad; 
+                    contadorSalsasEnvio++; 
+                 } 
+              } else { totalItem = precioFinalUnidad * item.cant; }
+              carritoParaEnviar.push({ nombre: item.nombre, cant: item.cant, precioTotalCalculado: totalItem });
+          }
       });
 
       if (idPedidoEnEdicion) { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).modificarPedidoPOS(idPedidoEnEdicion, datosCliente, JSON.stringify(carritoParaEnviar)); } 
-      else { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).guardarPedidoPOS(datosCliente, JSON.stringify(carritoParaEnviar)); }
+      else { google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; cargarSistemaCentral(); }).guardarPedidoPOS(datosCliente, JSON.stringify(carritoParaEnviar), "ADMIN_MASTER"); }
     }
 
+    // ==========================================
+    // [MÓDULO 09] - CIERRE, MERMAS, RECETAS Y COMPRAS
+    // ==========================================
     function confirmarCierre() { if(!confirm("¿Estás seguro de realizar el Cierre de Turno?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; google.script.run.withFailureHandler(errorServidor).withSuccessHandler((resumen) => { document.getElementById('loadingOverlay').style.display = 'none'; mostrarModalCierre(resumen); cargarSistemaCentral(); }).ejecutarCierreTurnoKDS(); }
     function mostrarModalCierre(res) { let pagosHtml = ""; for(let m in res.pagos) pagosHtml += `<li class="flex justify-between border-b border-gray-200 py-1"><span>${m}:</span> <strong>$${res.pagos[m].toLocaleString()}</strong></li>`; document.getElementById('resVentas').innerText = res.ventas; document.getElementById('resTotal').innerText = "$" + res.total.toLocaleString(); document.getElementById('resUtilidad').innerText = "$" + res.utilidad.toLocaleString(); document.getElementById('resAnulados').innerText = res.anulados; document.getElementById('resPagos').innerHTML = pagosHtml || "<li>Sin ingresos</li>"; document.getElementById('modalCierre').style.display = 'flex'; }
     function cerrarModalCierre() { document.getElementById('modalCierre').style.display = 'none'; }
 
     function abrirModalMermas() { document.getElementById('modalMermas').style.display = 'flex'; if (catalogoGlobal.length === 0) { document.getElementById('contenedorBotonesMermas').innerHTML = "<p class='text-gray-500 font-bold'>Cargando...</p>"; google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => { catalogoGlobal = res; pintarBotonesMermas(catalogoGlobal); }).obtenerCatalogoCompras(); } else { pintarBotonesMermas(catalogoGlobal); } }
     function cerrarModalMermas() { document.getElementById('modalMermas').style.display = 'none'; }
-    function pintarBotonesMermas(lista) { const contenedor = document.getElementById('contenedorBotonesMermas'); contenedor.innerHTML = ""; lista.forEach(item => { const btn = document.createElement('button'); btn.className = 'bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm text-left hover:border-yellow-500 transition flex flex-col justify-center'; btn.innerHTML = `<span class="font-bold text-sm">${item.nombre}</span><span class="text-xs text-gray-500">${item.unidad}</span>`; btn.onclick = () => agregarMermaCarrito(item.nombre, item.hoja, item.unidad); contenedor.appendChild(btn); }); }
+    function pintarBotonesMermas(lista) { const contenedor = document.getElementById('contenedorBotonesMermas'); let html = ""; lista.forEach(item => { html += `<button class="bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm text-left hover:border-yellow-500 transition flex flex-col justify-center" onclick="agregarMermaCarrito('${item.nombre}', '${item.hoja}', '${item.unidad}')"><span class="font-bold text-sm">${item.nombre}</span><span class="text-xs text-gray-500">${item.unidad}</span></button>`; }); contenedor.innerHTML = html; }
     function filtrarMermas() { const texto = document.getElementById('buscadorMermas').value.toLowerCase(); const filtrados = catalogoGlobal.filter(item => item.nombre.toLowerCase().includes(texto)); pintarBotonesMermas(filtrados); }
     function agregarMermaCarrito(nombre, hoja, unidad) { const cant = prompt(`🗑️ ¿Qué cantidad de ${nombre} (en ${unidad}) se va a dar de baja?`); if (!cant || isNaN(cant) || cant <= 0) return; const motivo = prompt(`📝 ¿Cuál es el motivo?`); if (!motivo) return; carritoMermas.push({ nombre: nombre, hoja: hoja, cantidad: Number(cant), motivo: motivo }); dibujarCarritoMermas(); }
     function eliminarMermaCarrito(index) { carritoMermas.splice(index, 1); dibujarCarritoMermas(); }
-    function dibujarCarritoMermas() { const tbody = document.getElementById('bodyCarritoMermas'); tbody.innerHTML = ""; carritoMermas.forEach((item, idx) => { tbody.innerHTML += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-xs text-gray-500">${item.motivo}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarMermaCarrito(${idx})">X</button></td></tr>`; }); }
+    function dibujarCarritoMermas() { const tbody = document.getElementById('bodyCarritoMermas'); let html = ""; carritoMermas.forEach((item, idx) => { html += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-xs text-gray-500">${item.motivo}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarMermaCarrito(${idx})">X</button></td></tr>`; }); tbody.innerHTML = html; }
     function enviarLoteMermas() { if (carritoMermas.length === 0) return; if(!confirm("¿Confirmar baja?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; cerrarModalMermas(); google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; carritoMermas = []; dibujarCarritoMermas(); cargarSistemaCentral(); alert("✅ Mermas registradas."); }).doPost({ parameter: { accion: "guardar_mermas_lote", mermas_data: JSON.stringify(carritoMermas) } }); }
 
     function abrirModalReceta(nombre) { document.getElementById('loadingOverlay').style.display = 'flex'; google.script.run.withFailureHandler(errorServidor).withSuccessHandler(res => { document.getElementById('loadingOverlay').style.display = 'none'; document.getElementById('tituloReceta').innerText = "📖 " + nombre; let html = `<ul class="divide-y divide-[#495057]">`; if(res.length === 0) { html += `<li class="py-3 text-danger text-center">No se encontró receta.</li>`; } else { res.forEach(r => { html += `<li class="py-3 flex justify-between text-base"><span>${r.ingrediente}</span><strong class="text-acento">${r.cantidad}</strong></li>`; }); } html += `</ul>`; document.getElementById('contenidoReceta').innerHTML = html; document.getElementById('modalReceta').style.display = 'flex'; }).obtenerRecetaProducto(nombre); }
@@ -508,13 +681,16 @@
     function abrirModalCompras() { document.getElementById('modalCompras').style.display = 'flex'; if (catalogoGlobal.length === 0) { document.getElementById('contenedorBotonesInsumos').innerHTML = "<p class='text-gray-500 font-bold'>Cargando...</p>"; google.script.run.withFailureHandler(errorServidor).withSuccessHandler(renderizarCatalogo).obtenerCatalogoCompras(); } else { renderizarCatalogo(catalogoGlobal); } }
     function cerrarModalCompras() { document.getElementById('modalCompras').style.display = 'none'; }
     function renderizarCatalogo(catalogo) { catalogoGlobal = catalogo; pintarBotonesInsumos(catalogoGlobal); }
-    function pintarBotonesInsumos(lista) { const contenedor = document.getElementById('contenedorBotonesInsumos'); contenedor.innerHTML = ""; lista.forEach(item => { const btn = document.createElement('button'); btn.className = 'bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm text-left hover:border-blue-500 transition flex flex-col justify-center'; btn.innerHTML = `<span class="font-bold text-sm">${item.nombre}</span><span class="text-xs text-gray-500">${item.unidad}</span>`; btn.onclick = () => agregarAlCarrito(item.nombre, item.hoja, item.unidad); contenedor.appendChild(btn); }); }
+    function pintarBotonesInsumos(lista) { const contenedor = document.getElementById('contenedorBotonesInsumos'); let html = ""; lista.forEach(item => { html += `<button class="bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm text-left hover:border-blue-500 transition flex flex-col justify-center" onclick="agregarAlCarrito('${item.nombre}', '${item.hoja}', '${item.unidad}')"><span class="font-bold text-sm">${item.nombre}</span><span class="text-xs text-gray-500">${item.unidad}</span></button>`; }); contenedor.innerHTML = html; }
     function filtrarCatalogo() { const texto = document.getElementById('buscadorInsumos').value.toLowerCase(); const filtrados = catalogoGlobal.filter(item => item.nombre.toLowerCase().includes(texto)); pintarBotonesInsumos(filtrados); }
     function agregarAlCarrito(nombre, hoja, unidad) { const cant = prompt(`🛒 ¿Cantidad de ${nombre} (${unidad}) comprada?`); if (!cant || isNaN(cant) || cant <= 0) return; const costo = prompt(`💰 ¿Total pagado? (Sin puntos ni comas)`); if (!costo || isNaN(costo) || costo <= 0) return; carritoCompras.push({ nombre: nombre, hoja: hoja, cantidad: Number(cant), costoTotal: Number(costo) }); dibujarCarrito(); }
     function eliminarDelCarrito(index) { carritoCompras.splice(index, 1); dibujarCarrito(); }
-    function dibujarCarrito() { const tbody = document.getElementById('bodyCarrito'); tbody.innerHTML = ""; let granTotal = 0; carritoCompras.forEach((item, idx) => { granTotal += item.costoTotal; tbody.innerHTML += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-right text-gray-600 font-bold">$${item.costoTotal.toLocaleString()}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarDelCarrito(${idx})">X</button></td></tr>`; }); document.getElementById('totalCarritoTexto').innerText = granTotal.toLocaleString(); }
+    function dibujarCarrito() { const tbody = document.getElementById('bodyCarrito'); let html = ""; let granTotal = 0; carritoCompras.forEach((item, idx) => { granTotal += item.costoTotal; html += `<tr><td class="pb-2 font-bold">${item.nombre}</td><td class="pb-2">${item.cantidad}</td><td class="pb-2 text-right text-gray-600 font-bold">$${item.costoTotal.toLocaleString()}</td><td class="pb-2 text-right"><button class="text-danger font-bold" onclick="eliminarDelCarrito(${idx})">X</button></td></tr>`; }); tbody.innerHTML = html; document.getElementById('totalCarritoTexto').innerText = granTotal.toLocaleString(); }
     function enviarLoteCompras() { if (carritoCompras.length === 0) return; if(!confirm("¿Registrar compras?")) return; document.getElementById('loadingOverlay').style.display = 'flex'; cerrarModalCompras(); google.script.run.withFailureHandler(errorServidor).withSuccessHandler(() => { document.getElementById('loadingOverlay').style.display = 'none'; carritoCompras = []; dibujarCarrito(); cargarSistemaCentral(); alert("✅ Compras ingresadas."); }).doPost({ parameter: { accion: "guardar_compras_lote", compras_data: JSON.stringify(carritoCompras) } }); }
 
+    // ==========================================
+    // [MÓDULO 10] - MOTOR DE RENDERIZADO KDS Y TIMERS
+    // ==========================================
     function cargarSistemaCentral() {
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarTickets).obtenerPedidosKDS();
       google.script.run.withFailureHandler(errorServidor).withSuccessHandler(dibujarAlertaInventario).obtenerAlertasInventario();
@@ -547,7 +723,25 @@
 
       datos.forEach(p => {
         let isRush = p.tipo.includes('⚡') || (p.notas && p.notas.includes('RUSH ⚡'));
-        let itemsHtml = p.itemsObj.map(item => `<li class="py-1 border-b border-dashed border-gray-300 text-sm font-semibold flex justify-between items-center text-oscuro"><span>${item.nombre} (x${item.cant})</span><button class="text-lg hover:scale-110 transition" onclick="abrirModalReceta('${item.nombre}')">📖</button></li>`).join('');
+        
+        let itemsHtml = '';
+        p.itemsObj.forEach(item => {
+            if (item.isSubItem === "HIDDEN") return;
+            if (item.isSubItem === true) {
+                itemsHtml += `
+                <li class="flex justify-between items-center py-1.5 pl-6 border-b border-dashed border-gray-200 bg-[#f8f9fa]">
+                    <span class="font-semibold text-sm text-[#495057] flex items-center gap-2">
+                        <span class="text-acento font-bold">↳</span> ${item.nombre} <span class="text-acento font-bold ml-1">(x${item.cant})</span>
+                    </span>
+                </li>`;
+            } else {
+                itemsHtml += `
+                <li class="flex justify-between items-center py-2 border-b border-gray-300 mt-1">
+                    <span class="font-bold text-lg text-oscuro">${item.nombre} <span class="text-acento font-bold ml-1">(x${item.cant})</span></span>
+                    <button class="bg-gray-200 text-oscuro rounded px-2 py-1 shadow-sm hover:bg-acento hover:text-white transition text-sm" onclick="abrirModalReceta('${item.nombre}')">📖</button>
+                </li>`;
+            }
+        });
         
         let botonesFooter = ''; let adminButtons = '';
 
@@ -579,11 +773,17 @@
         if (isRush) ticketClass += ' rush-ticket';
 
         let displayTurno = p.id.split('-').length > 2 ? p.id.split('-')[p.id.split('-').length - 2] : p.id.split('-').pop();
+        let horaIngreso = new Date(p.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
         let htmlInner = `
-          <div class="bg-gray-100 p-4 border-b border-gray-200 flex justify-between items-center rounded-t-lg">
-            <div class="text-2xl font-display text-oscuro">#${displayTurno} ${isRush ? '⚡' : ''}</div>
-            <div class="text-xs font-bold px-3 py-1 rounded-full bg-gray-500 text-white shadow-inner" style="${isRush ? 'background:#dc3545;' : ''}">${p.tipo}</div>
+          <div class="bg-gray-100 p-4 border-b border-gray-200 flex justify-between items-start rounded-t-lg">
+            <div>
+               <div class="text-2xl font-display text-oscuro">#${displayTurno} ${isRush ? '⚡' : ''}</div>
+               <div class="text-xs font-bold text-gray-600 mt-1 bg-white px-2 py-1 rounded shadow-sm border border-gray-200 inline-block">
+                  ⌚ ${horaIngreso} <span class="mx-1 text-gray-300">|</span> ⏱️ <span class="cronometro font-mono text-danger text-[13px]" data-time="${p.timestamp || Date.now()}">00:00</span>
+               </div>
+            </div>
+            <div class="text-xs font-bold px-3 py-1 rounded-full bg-gray-500 text-white shadow-inner text-center" style="${isRush ? 'background:#dc3545;' : ''}">${p.tipo}</div>
           </div>
           <div class="p-4 flex-grow bg-white">
             <div class="font-bold text-lg text-oscuro mb-1">👤 ${p.cliente}</div>
@@ -615,37 +815,25 @@
     }
 
     setInterval(cargarSistemaCentral, 5000);
+
+    // Motor asíncrono para el cálculo de latencia de tickets
+    setInterval(() => {
+        document.querySelectorAll('.cronometro').forEach(el => {
+            let startTime = parseInt(el.getAttribute('data-time'));
+            if (!startTime) return;
+            let diff = Math.floor((Date.now() - startTime) / 1000);
+            if (diff < 0) diff = 0;
+            let m = Math.floor(diff / 60).toString().padStart(2, '0');
+            let s = (diff % 60).toString().padStart(2, '0');
+            if (diff >= 3600) {
+                let h = Math.floor(diff / 3600).toString().padStart(2, '0');
+                m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+                el.innerText = h + ':' + m + ':' + s;
+            } else {
+                el.innerText = m + ':' + s;
+            }
+        });
+    }, 1000);
   </script>
 </body>
 </html>
-<script>
-    function dispararAlarma() {
-      if (!alarmasActivadas || !audioDesbloqueado) {
-        console.log("Alarma bloqueada: Esperando interacción del usuario.");
-        return;
-      }
-      
-      const audio = document.getElementById('sonidoAlarma');
-      audio.currentTime = 0;
-      
-      let playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error("Fallo audio externo, iniciando Beep de emergencia:", error);
-          const context = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = context.createOscillator();
-          const gain = context.createGain();
-          osc.connect(gain);
-          gain.connect(context.destination);
-          osc.type = "sine";
-          osc.frequency.value = 880;
-          gain.gain.setValueAtTime(0, context.currentTime);
-          gain.gain.linearRampToValueAtTime(0.5, context.currentTime + 0.1);
-          gain.gain.linearRampToValueAtTime(0, context.currentTime + 0.5);
-          osc.start(context.currentTime);
-          osc.stop(context.currentTime + 0.5);
-        });
-      }
-    }
-</script>
